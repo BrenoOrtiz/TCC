@@ -27,8 +27,8 @@ AUGMENTATION_LLM = "llama3.1:latest"
 AUGMENTATION_LLM_SLUG = "llama3.1-latest"
 AUGMENTATION_LLM_PARAMS = 8.03e9  # usado na estimativa de FLOPs da geração
 
-# 75% não está no repositório de origem (apenas 10/25/50 foram gerados)
-RATIOS = [10]  # cenário em execução; 25 e 50 também existem em data/generated
+# 75%: train_restricted_75pct.csv recriado por make_restricted_split.py (mesmo método da origem)
+RATIOS = [10, 25, 50, 75]
 
 LABEL_NAMES = {"negative": 0, "neutral": 1, "positive": 2}
 SEEDS = [42, 43, 44]
