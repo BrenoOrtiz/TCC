@@ -1,0 +1,11 @@
+{
+  "model": "llama3.1:latest",
+  "ratio": 25,
+  "seed": 43,
+  "n": 692,
+  "seconds": 699.5551979590018,
+  "sec_per_sentence": 1.0109179161257251,
+  "prompt_tokens": 70491,
+  "output_tokens": 17068,
+  "calls": 692
+}

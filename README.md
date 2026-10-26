@@ -22,8 +22,11 @@ de origem: F1 macro 0.8912 em 25%, e CSVs sem textos multilinha).
 | `tinybert_restricted` | TinyBERT | (1−r)·N real | referência de escassez |
 | **`hybrid_restricted`** | TextCNN → top-12 features → TinyBERT | (1−r)·N real | **braço TL** |
 
-r ∈ {10%, 25%, 50%} disponíveis (o 75% não foi gerado no repositório de origem);
-padrão atual `RATIOS = [10]`. Seeds {42, 43, 44} → **9 runs por cenário**, todos
+r ∈ {10%, 25%, 50%, 75%} (`RATIOS` em `config.py`). Os splits restritos de 10/25/50%
+vieram do repositório de origem; o de 75% (689 frases reais) é recriado por
+`make_restricted_split.py` com o mesmo método da origem (amostragem estratificada por
+classe, `random_state=42`; o script confere que reproduz os outros três arquivos
+exatamente). Seeds {42, 43, 44} → **9 runs por cenário** (36 no total), todos
 avaliados no mesmo `data/raw/test.csv` (690 frases). Braços extras continuam
 suportados via `--arms` (`tinybert_full`, `textcnn_restricted`, `hybrid_augmented`).
 
@@ -102,6 +105,7 @@ DA vs TinyBERT escasso (ganho do DA).
 ├── run_experiment.py            # executa todos os runs + análise (retoma se interrompido)
 ├── analyze.py                   # refaz só a análise a partir de results/runs.csv
 ├── measure_generation_cost.py   # mede s/frase do llama3.1 (só p/ LIVE_GENERATION = False)
+├── make_restricted_split.py     # recria train_restricted_<r>pct.csv como na origem (usado p/ 75%)
 ├── data/
 │   ├── raw/                     # Sentences_75Agree.txt, train_full.csv, test.csv
 │   ├── generated/llama3.1-latest/  # train_{restricted,augmented}_*, synthetic_only_*
@@ -124,9 +128,9 @@ uv sync
 # 1. teste rápido do pipeline (subamostra, 1 época) → results_smoke/
 uv run python run_experiment.py --smoke
 
-# 2. cenário(s) de RATIOS em config.py (padrão: 10%) → results/
+# 2. cenários de RATIOS em config.py (10, 25, 50, 75) → results/
 uv run python run_experiment.py
-uv run python run_experiment.py --ratios 10 25 50   # todos os cenários
+uv run python run_experiment.py --ratios 25        # só um cenário
 
 ```
 
@@ -158,6 +162,8 @@ O dispositivo é escolhido automaticamente (CUDA > MPS > CPU); force com `DEVICE
 | `report.md` | **relatório que responde à pergunta** |
 | `fig_f1_vs_cost_*.png` | F1 × custo (log) com fronteira de Pareto, um painel por ratio |
 | `fig_f1_by_ratio.png`, `fig_cost_breakdown.png`, `fig_delta_f1_forest.png` | F1 por escassez, composição do custo, ΔF1 com IC |
+| `fig_ce_plane.png` | plano custo-efetividade TL vs DA: ΔF1 (IC 95%) × razão de custo, um ponto por escassez |
+| `fig_cost_by_ratio.png`, `fig_delta_f1_by_ratio.png` | custo de cada braço e ΔF1 (ganhos sobre o escasso; TL − DA) ao longo da escassez |
 
 ## Limitações a declarar no TCC
 
