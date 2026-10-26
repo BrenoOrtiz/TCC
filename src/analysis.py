@@ -18,6 +18,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
+from matplotlib.ticker import EngFormatter, FuncFormatter, LogLocator, NullFormatter  # noqa: E402
 from scipy.stats import wilcoxon  # noqa: E402
 
 from config import (  # noqa: E402
@@ -243,14 +244,24 @@ def _style(ax: plt.Axes) -> None:
     ax.tick_params(colors=INK_2, labelsize=9)
 
 
-def _figure(ncols: int, width: float = 4.2, height: float = 3.8):
+def _figure(n: int, width: float = 4.2, height: float = 3.8, sharey: bool = True, max_cols: int = 4):
+    """n painéis em grade de até `max_cols` colunas; devolve os eixos achatados (só os usados)."""
+    ncols = min(n, max_cols)
+    nrows = math.ceil(n / ncols)
     fig, axes = plt.subplots(
-        1, ncols, figsize=(max(width * ncols, 9.0), height), squeeze=False, sharey=True
+        nrows, ncols, figsize=(max(width * ncols, 9.0), height * nrows), squeeze=False, sharey=sharey
     )
     fig.patch.set_facecolor(SURFACE)
-    for ax in axes[0]:
+    axes = axes.ravel()
+    for ax in axes[n:]:
+        ax.set_visible(False)
+    for ax in axes[:n]:
         _style(ax)
-    return fig, axes[0]
+    return fig, axes[:n]
+
+
+def _first_column(axes) -> list[plt.Axes]:
+    return [ax for ax in axes if ax.get_subplotspec().is_first_col()]
 
 
 def _pareto(points: pd.DataFrame, cost: str) -> pd.DataFrame:
@@ -263,6 +274,15 @@ def _pareto(points: pd.DataFrame, cost: str) -> pd.DataFrame:
     return pd.DataFrame(front)
 
 
+def _log_cost_axis(axis, cost: str, time_unit: str = "s") -> None:
+    """Ticks legíveis em eixo log de custo (1-3-10): 30 TFLOP, 100 TFLOP… ou 30 s, 100 s…"""
+    flops = cost.endswith("flops")
+    axis.set_major_locator(LogLocator(base=10, subs=(1.0, 3.0)))
+    axis.set_major_formatter(EngFormatter(unit="FLOP", sep=" ") if flops
+                             else FuncFormatter(lambda v, _pos: f"{v:g} {time_unit}"))
+    axis.set_minor_formatter(NullFormatter())
+
+
 def plot_f1_vs_cost(runs: pd.DataFrame, cost: str, out: Path) -> None:
     ratios = sorted(runs.loc[runs["ratio"] > 0, "ratio"].unique())
     stats = runs.groupby(["arm", "ratio"]).agg(
@@ -271,7 +291,8 @@ def plot_f1_vs_cost(runs: pd.DataFrame, cost: str, out: Path) -> None:
     if stats[cost].isna().all():
         return
     full = stats[stats["arm"] == "tinybert_full"]
-    fig, axes = _figure(len(ratios))
+    # y independente por painel: a comparação aqui é dentro do cenário (entre cenários: fig_f1_by_ratio)
+    fig, axes = _figure(len(ratios), width=5.4, height=4.2, sharey=False, max_cols=2)
     for ax, ratio in zip(axes, ratios):
         pts = stats[(stats["ratio"] == ratio) & stats["arm"].isin(ARM_STYLE)].dropna(subset=[cost])
         front = _pareto(pts, cost)
@@ -289,15 +310,18 @@ def plot_f1_vs_cost(runs: pd.DataFrame, cost: str, out: Path) -> None:
             ax.annotate("TinyBERT 100% real", (0.02, full["f1_macro"].iloc[0]), xycoords=("axes fraction", "data"),
                         textcoords="offset points", xytext=(0, 4), fontsize=8, color=INK_2)
         ax.set_xscale("log")
+        _log_cost_axis(ax.xaxis, cost)
         ax.set_title(f"{ratio}% dos dados reais removidos", fontsize=10, color=INK, loc="left")
         ax.set_xlabel(COST_LABELS.get(cost, cost) + " — escala log", fontsize=9, color=INK_2)
-    axes[0].set_ylabel("F1 macro (média ± dp entre seeds)", fontsize=9, color=INK_2)
+    for ax in _first_column(axes):
+        ax.set_ylabel("F1 macro (média ± dp entre seeds)", fontsize=9, color=INK_2)
     handles, labels = axes[0].get_legend_handles_labels()
+    legend_h = 0.5 / fig.get_figheight()  # faixa da legenda (0,5 pol.) independente da nº de linhas
     fig.legend(handles, labels, loc="lower center", ncol=3, frameon=False, fontsize=9,
-               labelcolor=INK, bbox_to_anchor=(0.5, -0.01))
+               labelcolor=INK, bbox_to_anchor=(0.5, 0))
     fig.suptitle("Performance × custo computacional (pontilhado = fronteira de Pareto)",
                  x=0.01, ha="left", fontsize=11, color=INK)
-    fig.tight_layout(rect=(0, 0.12, 1, 0.95))
+    fig.tight_layout(rect=(0, legend_h, 1, 1 - 0.3 / fig.get_figheight()))
     fig.savefig(out, dpi=200, facecolor=SURFACE)
     plt.close(fig)
 
@@ -342,7 +366,7 @@ def plot_cost_breakdown(runs: pd.DataFrame, out: Path) -> None:
     ratios = sorted(runs.loc[runs["ratio"] > 0, "ratio"].unique())
     means = runs.groupby(["arm", "ratio"])[[c for c, *_ in comps] + ["total_flops"]].mean()
     arms = [a for a in ARM_STYLE if a in runs["arm"].unique()]
-    fig, axes = _figure(len(ratios), width=4.6, height=3.4)
+    fig, axes = _figure(len(ratios), width=5.4, height=3.0, max_cols=2)
     for ax, ratio in zip(axes, ratios):
         present = [a for a in arms if (a, ratio) in means.index]
         totals = np.array([means.loc[(a, ratio), "total_flops"] for a in present])
@@ -357,17 +381,17 @@ def plot_cost_breakdown(runs: pd.DataFrame, out: Path) -> None:
             ax.annotate(text, (100, y), textcoords="offset points", xytext=(4, 0),
                         va="center", fontsize=8, color=INK_2)
         ax.set_yticks(range(len(present)), [ARM_LABELS[a] for a in present], fontsize=8, color=INK)
-        ax.invert_yaxis()
+        ax.yaxis.set_inverted(True)  # idempotente: invert_yaxis() alternaria nos eixos compartilhados
         ax.set_xlim(0, 135)
         ax.set_xticks([0, 25, 50, 75, 100])
         ax.set_title(f"{ratio}% removidos", fontsize=10, color=INK, loc="left")
         ax.set_xlabel("% dos FLOPs totais", fontsize=9, color=INK_2)
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="lower center", ncol=3, frameon=False, fontsize=9, labelcolor=INK,
-               bbox_to_anchor=(0.5, -0.01))
+               bbox_to_anchor=(0.5, 0))
     fig.suptitle("Composição do custo computacional (FLOPs estimados; total à direita)",
                  x=0.01, ha="left", fontsize=11, color=INK)
-    fig.tight_layout(rect=(0, 0.1, 1, 0.94))
+    fig.tight_layout(rect=(0, 0.45 / fig.get_figheight(), 1, 1 - 0.3 / fig.get_figheight()))
     fig.savefig(out, dpi=200, facecolor=SURFACE)
     plt.close(fig)
 
@@ -392,6 +416,157 @@ def plot_forest(con: pd.DataFrame, out: Path) -> None:
                   fontsize=9, color=INK_2)
     ax.set_title("Diferenças pareadas de F1 (azul = contraste principal)", fontsize=11, color=INK, loc="left")
     fig.tight_layout()
+    fig.savefig(out, dpi=200, facecolor=SURFACE)
+    plt.close(fig)
+
+
+def _times_formatter(v: float, _pos) -> str:
+    return f"{v:g}×"
+
+
+def plot_ce_plane(con: pd.DataFrame, out: Path) -> None:
+    """Plano custo-efetividade do contraste principal: ΔF1 (IC 95%) × razão de custo TL/DA.
+
+    Um ponto por nível de escassez, ligados em ordem crescente de escassez.
+    Esquerda da linha 1× = TL mais barato; acima de 0 = TL melhor.
+    """
+    metrics = [m for m in ("total_time_s", "total_flops") if m in set(con["cost_metric"])]
+    prim = con[con["primary"] & con["cost_metric"].isin(metrics)]
+    if prim.empty:
+        return
+    color = ARM_STYLE[PRIMARY_CONTRAST[0]]["color"]
+    fig, axes = _figure(len(metrics), width=5.4, height=4.6)
+    for ax, metric in zip(axes, metrics):
+        d = prim[prim["cost_metric"] == metric].sort_values("ratio")
+        x, y = d["cost_ratio"].to_numpy(), d["delta_f1"].to_numpy() * 100
+        lo, hi = d["ci_low"].to_numpy() * 100, d["ci_high"].to_numpy() * 100
+        span = max(1.0, np.abs(np.log10(x)).max()) * 1.25
+        ax.set_xscale("log")
+        ax.set_xlim(10**-span, 10**span)
+        ax.xaxis.set_major_formatter(FuncFormatter(_times_formatter))
+        ax.axvline(1, color=INK_2, linewidth=1)
+        ax.axhline(0, color=INK_2, linewidth=1)
+        ax.axhline(-NON_INFERIORITY_MARGIN * 100, color=INK_2, linewidth=1, linestyle=":")
+        ax.plot(x, y, color=color, linewidth=1, alpha=0.45, zorder=2)
+        ax.errorbar(x, y, yerr=[y - lo, hi - y], fmt="o", color=color, markersize=8, linewidth=1.5,
+                    capsize=3, markeredgecolor=SURFACE, markeredgewidth=1.5, zorder=3)
+        for i, (xi, yi, ratio) in enumerate(zip(x, y, d["ratio"])):
+            # alterna acima/abaixo para que cenários vizinhos não colidam
+            ax.annotate(f"{ratio}%", (xi, yi), textcoords="offset points", xytext=(6, 5 if i % 2 else -12),
+                        fontsize=8, color=INK)
+        for (qx, qy, ha, va, text) in [
+            (0.02, 0.98, "left", "top", "TL melhor e mais barato"),
+            (0.98, 0.98, "right", "top", "TL melhor, porém mais caro"),
+            (0.02, 0.02, "left", "bottom", "TL mais barato, porém pior"),
+            (0.98, 0.02, "right", "bottom", "TL pior e mais caro"),
+        ]:
+            ax.text(qx, qy, text, transform=ax.transAxes, ha=ha, va=va, fontsize=8, color=INK_2)
+        ax.set_title(COST_LABELS[metric], fontsize=10, color=INK, loc="left")
+        ax.set_xlabel("custo TL ÷ custo DA (log; < 1× = TL mais barato)", fontsize=9, color=INK_2)
+    ymin = min(prim["ci_low"].min() * 100, -NON_INFERIORITY_MARGIN * 100)
+    ymax = max(prim["ci_high"].max() * 100, 0)
+    pad = (ymax - ymin) * 0.18
+    axes[0].set_ylim(ymin - pad, ymax + pad)
+    axes[0].set_ylabel("ΔF1 macro TL − DA (p.p., IC 95% bootstrap)", fontsize=9, color=INK_2)
+    fig.suptitle("Plano custo-efetividade: TextCNN→TinyBERT (TL) vs TinyBERT + DA",
+                 x=0.01, y=0.98, ha="left", fontsize=11, color=INK)
+    fig.text(0.01, 0.915, "um ponto por % de dados reais removidos · barras = IC 95% · "
+             f"pontilhado = margem de não-inferioridade (−{NON_INFERIORITY_MARGIN * 100:.0f} p.p.)",
+             ha="left", fontsize=9, color=INK_2)
+    fig.tight_layout(rect=(0, 0, 1, 0.9))
+    fig.savefig(out, dpi=200, facecolor=SURFACE)
+    plt.close(fig)
+
+
+def _end_labels(ax: plt.Axes, ends: list[tuple[float, float, str]], min_gap_pt: float = 11) -> None:
+    """Rótulos de fim de linha afastados verticalmente o mínimo para não colidirem."""
+    ax.get_ylim()  # força o autoscale pendente antes de converter para pontos
+    to_pt = 72 / ax.figure.dpi
+    ys = [ax.transData.transform((x, y))[1] * to_pt for x, y, _ in ends]
+    placed: list[float] = []
+    for i in np.argsort(ys):
+        placed.append(max(ys[i], placed[-1] + min_gap_pt) if placed else ys[i])
+        x, y, text = ends[i]
+        ax.annotate(text, (x, y), textcoords="offset points", xytext=(8, placed[-1] - ys[i]),
+                    va="center", fontsize=8, color=INK_2)
+
+
+def plot_cost_by_ratio(runs: pd.DataFrame, out: Path) -> None:
+    """Custo médio por nível de escassez; um painel por métrica (nunca eixo duplo)."""
+    panels = [
+        ("total_time_s", 1 / 60, "Tempo total (min, treino + geração LLM) — log"),
+        ("total_flops", 1.0, "FLOPs totais (treino + geração LLM) — log"),
+    ]
+    stats = runs[runs["ratio"] > 0].groupby(["arm", "ratio"])[[c for c, *_ in panels]].mean().reset_index()
+    arms = [a for a in ARM_STYLE if a in set(stats["arm"])]
+    ratios = sorted(stats["ratio"].unique())
+    fig, axes = _figure(len(panels), width=5.4, height=4.2, sharey=False)
+    for ax, (col, scale, title) in zip(axes, panels):
+        ends = []
+        for arm in arms:
+            st = ARM_STYLE[arm]
+            s = stats[stats["arm"] == arm].sort_values("ratio")
+            vals = s[col] * scale
+            ax.plot(s["ratio"], vals, color=st["color"], marker=st["marker"], markersize=8, linewidth=2,
+                    markeredgecolor=SURFACE, markeredgewidth=1.5, label=ARM_LABELS[arm])
+            last = vals.iloc[-1]
+            text = f"{last:.1f} min" if col == "total_time_s" else f"{last / 1e12:,.0f} TFLOP"
+            ends.append((s["ratio"].iloc[-1], last, text))
+        ax.set_yscale("log")
+        _log_cost_axis(ax.yaxis, col, time_unit="min")
+        ax.set_xticks(ratios)
+        ax.set_xlim(min(ratios) - 5, max(ratios) + 14)
+        _end_labels(ax, ends)
+        ax.set_xlabel("% dos dados reais removidos (escassez)", fontsize=9, color=INK_2)
+        ax.set_title(title, fontsize=10, color=INK, loc="left")
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=len(arms), frameon=False, fontsize=9,
+               labelcolor=INK, bbox_to_anchor=(0.5, -0.01))
+    fig.suptitle("Custo computacional médio por nível de escassez (rótulo = valor no cenário mais escasso)",
+                 x=0.01, ha="left", fontsize=11, color=INK)
+    fig.tight_layout(rect=(0, 0.08, 1, 0.94))
+    fig.savefig(out, dpi=200, facecolor=SURFACE)
+    plt.close(fig)
+
+
+def plot_delta_by_ratio(con: pd.DataFrame, out: Path) -> None:
+    """ΔF1 (IC 95%) ao longo da escassez: ganho de cada estratégia e confronto direto TL − DA."""
+    d = con[con["cost_metric"] == COST_METRICS[0]]
+    if d.empty:
+        return
+    treat, comp = PRIMARY_CONTRAST
+    panels = [
+        ("Ganho sobre o TinyBERT escasso (só dados reais)",
+         [(t, c) for t, c in SECONDARY_CONTRASTS if c == "tinybert_restricted"]),
+        (f"Confronto direto: {ARM_LABELS[treat]} − {ARM_LABELS[comp]}", [PRIMARY_CONTRAST]),
+    ]
+    fig, axes = _figure(len(panels), width=5.4, height=4.2, sharey=False)
+    for ax, (title, pairs) in zip(axes, panels):
+        for t, c in pairs:
+            s = d[(d["treatment"] == t) & (d["comparator"] == c)].sort_values("ratio")
+            if s.empty:
+                continue
+            color = INK if (t, c) == PRIMARY_CONTRAST else ARM_STYLE[t]["color"]
+            marker = "o" if (t, c) == PRIMARY_CONTRAST else ARM_STYLE[t]["marker"]
+            label = ARM_LABELS[t] if (t, c) != PRIMARY_CONTRAST else "TL − DA"
+            ax.fill_between(s["ratio"], s["ci_low"] * 100, s["ci_high"] * 100, color=color, alpha=0.12,
+                            linewidth=0)
+            ax.plot(s["ratio"], s["delta_f1"] * 100, color=color, marker=marker, markersize=8, linewidth=2,
+                    markeredgecolor=SURFACE, markeredgewidth=1.5, label=label)
+        ax.axhline(0, color=INK_2, linewidth=1)
+        if pairs == [PRIMARY_CONTRAST]:
+            ax.axhline(-NON_INFERIORITY_MARGIN * 100, color=INK_2, linewidth=1, linestyle=":")
+            ax.annotate("margem de não-inferioridade", (0.01, -NON_INFERIORITY_MARGIN * 100),
+                        xycoords=("axes fraction", "data"), textcoords="offset points", xytext=(0, -11),
+                        fontsize=8, color=INK_2)
+        ax.set_xticks(sorted(d["ratio"].unique()))
+        ax.set_xlabel("% dos dados reais removidos (escassez)", fontsize=9, color=INK_2)
+        ax.set_title(title, fontsize=10, color=INK, loc="left")
+        ax.legend(frameon=False, fontsize=8, labelcolor=INK, loc="upper left")
+    axes[0].set_ylabel("ΔF1 macro (p.p.; faixa = IC 95% bootstrap pareado)", fontsize=9, color=INK_2)
+    fig.suptitle("Quanto cada estratégia recupera e quem vence em cada nível de escassez",
+                 x=0.01, ha="left", fontsize=11, color=INK)
+    fig.tight_layout(rect=(0, 0, 1, 0.94))
     fig.savefig(out, dpi=200, facecolor=SURFACE)
     plt.close(fig)
 
@@ -501,6 +676,9 @@ def write_report(runs: pd.DataFrame, con: pd.DataFrame, eff: pd.DataFrame, resul
         "- `fig_f1_by_ratio.png` — F1 por nível de escassez",
         "- `fig_cost_breakdown.png` — composição do custo",
         "- `fig_delta_f1_forest.png` — ΔF1 pareado com IC 95%",
+        "- `fig_ce_plane.png` — plano custo-efetividade TL vs DA (ΔF1 × razão de custo), um ponto por escassez",
+        "- `fig_cost_by_ratio.png` — custo total (tempo e FLOPs) de cada braço ao longo da escassez",
+        "- `fig_delta_f1_by_ratio.png` — ganho de TL e DA sobre o TinyBERT escasso e confronto TL − DA por escassez",
         "",
     ]
     (results_dir / "report.md").write_text("\n".join(lines), encoding="utf-8")
@@ -533,5 +711,8 @@ def run(results_dir: Path) -> None:
     plot_f1_by_ratio(runs, results_dir / "fig_f1_by_ratio.png")
     plot_cost_breakdown(runs, results_dir / "fig_cost_breakdown.png")
     plot_forest(con, results_dir / "fig_delta_f1_forest.png")
+    plot_ce_plane(con, results_dir / "fig_ce_plane.png")
+    plot_cost_by_ratio(runs, results_dir / "fig_cost_by_ratio.png")
+    plot_delta_by_ratio(con, results_dir / "fig_delta_f1_by_ratio.png")
     write_report(runs, con, eff, results_dir)
     logger.info("Relatório → %s", results_dir / "report.md")
