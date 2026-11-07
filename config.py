@@ -105,6 +105,12 @@ MONITOR_INTERVAL_S = 0.2       # amostragem de memória
 # valor. None = não medido (a análise usa apenas FLOPs para o custo da geração).
 GENERATION_SEC_PER_SENTENCE: float | None = None
 
+# Referência humana: tempo médio para um anotador rotular 1 título do dataset.
+# Nos gráficos de tempo, o custo de anotar à mão o mesmo nº de títulos que o
+# DA gera (n_synthetic do cenário) = n × este valor. Só tempo de anotação,
+# sem treino nem FLOPs.
+HUMAN_ANNOTATION_SEC_PER_SAMPLE = 4.6
+
 # Geração ao vivo no braço DA: em cada seed o llama3.1 gera as frases sintéticas
 # via Ollama (cronometrado) e o dataset augmentado = restrito + sintético novo.
 # O custo do DA passa a ser tempo TOTAL real (geração + treino). False = usa os
