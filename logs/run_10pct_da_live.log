@@ -1,0 +1,43 @@
+15:06:37 | INFO    | run_experiment | 3 run(s) a executar (6 já concluídos)
+15:06:37 | INFO    | src.bert | Carregando huawei-noah/TinyBERT_General_4L_312D …
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+15:06:37 | WARNING | huggingface_hub.utils._http | Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/71 [00:00<?, ?it/s]Loading weights: 100%|██████████| 71/71 [00:00<00:00, 56994.37it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: huawei-noah/TinyBERT_General_4L_312D
+Key                                        | Status     |  | 
+-------------------------------------------+------------+--+-
+cls.predictions.decoder.weight             | UNEXPECTED |  | 
+fit_denses.{0, 1, 2, 3, 4}.weight          | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+fit_denses.{0, 1, 2, 3, 4}.bias            | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+15:06:38 | INFO    | run_experiment | Aquecendo backend (mps) …
+15:06:43 | INFO    | run_experiment | ======================================================================
+15:06:43 | INFO    | run_experiment | [1/3] arm=tinybert_augmented ratio=10% seed=42
+15:06:43 | INFO    | src.generation |   Gerando 277 frases com llama3.1:latest {'neutral': 172, 'positive': 71, 'negative': 34}
+15:11:43 | INFO    | src.generation |   277 frases em 300.0s (1.08s/frase)
+15:12:23 | INFO    | run_experiment |   F1 macro=0.8870  acc=0.9101  treino=37.7s  FLOPs totais=6.02e+14  latência=2.52ms
+15:12:23 | INFO    | run_experiment | ======================================================================
+15:12:23 | INFO    | run_experiment | [2/3] arm=tinybert_augmented ratio=10% seed=43
+15:12:23 | INFO    | src.generation |   Gerando 277 frases com llama3.1:latest {'neutral': 172, 'positive': 71, 'negative': 34}
+15:17:14 | INFO    | src.generation |   277 frases em 291.1s (1.05s/frase)
+15:17:52 | INFO    | run_experiment |   F1 macro=0.8957  acc=0.9130  treino=36.5s  FLOPs totais=6.01e+14  latência=2.42ms
+15:17:52 | INFO    | run_experiment | ======================================================================
+15:17:52 | INFO    | run_experiment | [3/3] arm=tinybert_augmented ratio=10% seed=44
+15:17:52 | INFO    | src.generation |   Gerando 277 frases com llama3.1:latest {'neutral': 172, 'positive': 71, 'negative': 34}
+15:22:49 | INFO    | src.generation |   277 frases em 297.2s (1.07s/frase)
+15:23:27 | INFO    | run_experiment |   F1 macro=0.9080  acc=0.9232  treino=36.7s  FLOPs totais=6.02e+14  latência=2.42ms
+15:23:27 | INFO    | src.analysis | Analisando 9 runs de /Users/brenoortiz/Projects/TCC/results/runs.csv
+15:23:28 | INFO    | src.analysis | Relatório → /Users/brenoortiz/Projects/TCC/results/report.md
+{'train_runtime': '3.362', 'train_samples_per_second': '19.03', 'train_steps_per_second': '0.595', 'train_loss': '1.104', 'epoch': '1'}
+{'train_runtime': '37.54', 'train_samples_per_second': '294', 'train_steps_per_second': '9.27', 'train_loss': '0.4813', 'epoch': '4'}
+{'train_runtime': '36.39', 'train_samples_per_second': '303.3', 'train_steps_per_second': '9.563', 'train_loss': '0.4443', 'epoch': '4'}
+{'train_runtime': '36.61', 'train_samples_per_second': '301.5', 'train_steps_per_second': '9.506', 'train_loss': '0.4477', 'epoch': '4'}

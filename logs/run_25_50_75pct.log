@@ -1,0 +1,151 @@
+22:28:19 | INFO    | run_experiment | 27 run(s) a executar (9 já concluídos)
+22:28:19 | INFO    | src.bert | Carregando huawei-noah/TinyBERT_General_4L_312D …
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+22:28:20 | WARNING | huggingface_hub.utils._http | Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/71 [00:00<?, ?it/s]Loading weights: 100%|██████████| 71/71 [00:00<00:00, 39401.37it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: huawei-noah/TinyBERT_General_4L_312D
+Key                                        | Status     |  | 
+-------------------------------------------+------------+--+-
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+fit_denses.{0, 1, 2, 3, 4}.bias            | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+fit_denses.{0, 1, 2, 3, 4}.weight          | UNEXPECTED |  | 
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.predictions.decoder.weight             | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+22:28:22 | INFO    | run_experiment | Aquecendo backend (mps) …
+22:28:24 | INFO    | run_experiment | ======================================================================
+22:28:24 | INFO    | run_experiment | [1/27] arm=tinybert_augmented ratio=25% seed=42
+22:28:31 | INFO    | src.generation |   Gerando 692 frases com llama3.1:latest {'neutral': 429, 'positive': 178, 'negative': 85}
+22:40:53 | INFO    | src.generation |   692 frases em 742.1s (1.07s/frase)
+22:41:32 | INFO    | run_experiment |   F1 macro=0.8884  acc=0.9072  treino=37.1s  FLOPs totais=1.45e+15  latência=2.34ms
+22:41:32 | INFO    | run_experiment | ======================================================================
+22:41:32 | INFO    | run_experiment | [2/27] arm=tinybert_restricted ratio=25% seed=42
+22:42:00 | INFO    | run_experiment |   F1 macro=0.8898  acc=0.9101  treino=27.2s  FLOPs totais=2.89e+13  latência=2.31ms
+22:42:00 | INFO    | run_experiment | ======================================================================
+22:42:00 | INFO    | run_experiment | [3/27] arm=hybrid_restricted ratio=25% seed=42
+22:47:06 | INFO    | run_experiment |   F1 macro=0.8874  acc=0.9043  treino=302.7s  FLOPs totais=3.54e+13  latência=5.00ms
+22:47:06 | INFO    | run_experiment | ======================================================================
+22:47:06 | INFO    | run_experiment | [4/27] arm=tinybert_augmented ratio=50% seed=42
+22:47:07 | INFO    | src.generation |   Gerando 1380 frases com llama3.1:latest {'neutral': 857, 'positive': 355, 'negative': 168}
+23:10:48 | INFO    | src.generation |   1380 frases em 1420.9s (1.03s/frase)
+23:11:25 | INFO    | run_experiment |   F1 macro=0.8738  acc=0.8942  treino=36.1s  FLOPs totais=2.84e+15  latência=2.29ms
+23:11:25 | INFO    | run_experiment | ======================================================================
+23:11:25 | INFO    | run_experiment | [5/27] arm=tinybert_restricted ratio=50% seed=42
+23:11:45 | INFO    | run_experiment |   F1 macro=0.8655  acc=0.8899  treino=18.1s  FLOPs totais=1.93e+13  latência=2.27ms
+23:11:45 | INFO    | run_experiment | ======================================================================
+23:11:45 | INFO    | run_experiment | [6/27] arm=hybrid_restricted ratio=50% seed=42
+23:15:28 | INFO    | run_experiment |   F1 macro=0.8584  acc=0.8841  treino=220.2s  FLOPs totais=2.37e+13  latência=5.31ms
+23:15:28 | INFO    | run_experiment | ======================================================================
+23:15:28 | INFO    | run_experiment | [7/27] arm=tinybert_augmented ratio=75% seed=42
+23:15:28 | INFO    | src.generation |   Gerando 2071 frases com llama3.1:latest {'neutral': 1286, 'positive': 532, 'negative': 253}
+23:50:28 | INFO    | src.generation |   2071 frases em 2099.7s (1.01s/frase)
+23:51:06 | INFO    | run_experiment |   F1 macro=0.8583  acc=0.8812  treino=36.3s  FLOPs totais=4.25e+15  latência=2.28ms
+23:51:06 | INFO    | run_experiment | ======================================================================
+23:51:06 | INFO    | run_experiment | [8/27] arm=tinybert_restricted ratio=75% seed=42
+23:51:16 | INFO    | run_experiment |   F1 macro=0.4972  acc=0.7391  treino=9.2s  FLOPs totais=9.64e+12  latência=2.28ms
+23:51:16 | INFO    | run_experiment | ======================================================================
+23:51:16 | INFO    | run_experiment | [9/27] arm=hybrid_restricted ratio=75% seed=42
+23:53:10 | INFO    | run_experiment |   F1 macro=0.8009  acc=0.8435  treino=110.3s  FLOPs totais=1.18e+13  latência=5.30ms
+23:53:10 | INFO    | run_experiment | ======================================================================
+23:53:10 | INFO    | run_experiment | [10/27] arm=tinybert_augmented ratio=25% seed=43
+23:53:10 | INFO    | src.generation |   Gerando 692 frases com llama3.1:latest {'neutral': 429, 'positive': 178, 'negative': 85}
+00:04:49 | INFO    | src.generation |   692 frases em 699.6s (1.01s/frase)
+00:05:27 | INFO    | run_experiment |   F1 macro=0.8846  acc=0.9043  treino=36.0s  FLOPs totais=1.44e+15  latência=2.38ms
+00:05:27 | INFO    | run_experiment | ======================================================================
+00:05:27 | INFO    | run_experiment | [11/27] arm=tinybert_restricted ratio=25% seed=43
+00:05:55 | INFO    | run_experiment |   F1 macro=0.9073  acc=0.9203  treino=26.9s  FLOPs totais=2.89e+13  latência=2.39ms
+00:05:55 | INFO    | run_experiment | ======================================================================
+00:05:55 | INFO    | run_experiment | [12/27] arm=hybrid_restricted ratio=25% seed=43
+00:11:15 | INFO    | run_experiment |   F1 macro=0.9034  acc=0.9203  treino=317.3s  FLOPs totais=3.54e+13  latência=5.16ms
+00:11:15 | INFO    | run_experiment | ======================================================================
+00:11:15 | INFO    | run_experiment | [13/27] arm=tinybert_augmented ratio=50% seed=43
+00:11:16 | INFO    | src.generation |   Gerando 1380 frases com llama3.1:latest {'neutral': 857, 'positive': 355, 'negative': 168}
+00:34:25 | INFO    | src.generation |   1380 frases em 1388.5s (1.01s/frase)
+00:35:02 | INFO    | run_experiment |   F1 macro=0.8672  acc=0.8942  treino=35.8s  FLOPs totais=2.84e+15  latência=2.37ms
+00:35:02 | INFO    | run_experiment | ======================================================================
+00:35:02 | INFO    | run_experiment | [14/27] arm=tinybert_restricted ratio=50% seed=43
+00:35:21 | INFO    | run_experiment |   F1 macro=0.8722  acc=0.8957  treino=18.1s  FLOPs totais=1.93e+13  latência=2.34ms
+00:35:21 | INFO    | run_experiment | ======================================================================
+00:35:21 | INFO    | run_experiment | [15/27] arm=hybrid_restricted ratio=50% seed=43
+00:39:02 | INFO    | run_experiment |   F1 macro=0.8782  acc=0.9000  treino=217.9s  FLOPs totais=2.37e+13  latência=4.83ms
+00:39:02 | INFO    | run_experiment | ======================================================================
+00:39:02 | INFO    | run_experiment | [16/27] arm=tinybert_augmented ratio=75% seed=43
+00:39:02 | INFO    | src.generation |   Gerando 2071 frases com llama3.1:latest {'neutral': 1286, 'positive': 532, 'negative': 253}
+01:13:54 | INFO    | src.generation |   2071 frases em 2091.4s (1.01s/frase)
+01:14:32 | INFO    | run_experiment |   F1 macro=0.8624  acc=0.8812  treino=36.2s  FLOPs totais=4.25e+15  latência=2.38ms
+01:14:32 | INFO    | run_experiment | ======================================================================
+01:14:32 | INFO    | run_experiment | [17/27] arm=tinybert_restricted ratio=75% seed=43
+01:14:42 | INFO    | run_experiment |   F1 macro=0.7965  acc=0.8377  treino=9.1s  FLOPs totais=9.64e+12  latência=2.31ms
+01:14:42 | INFO    | run_experiment | ======================================================================
+01:14:42 | INFO    | run_experiment | [18/27] arm=hybrid_restricted ratio=75% seed=43
+01:16:36 | INFO    | run_experiment |   F1 macro=0.8128  acc=0.8493  treino=111.4s  FLOPs totais=1.18e+13  latência=4.75ms
+01:16:36 | INFO    | run_experiment | ======================================================================
+01:16:36 | INFO    | run_experiment | [19/27] arm=tinybert_augmented ratio=25% seed=44
+01:16:36 | INFO    | src.generation |   Gerando 692 frases com llama3.1:latest {'neutral': 429, 'positive': 178, 'negative': 85}
+01:28:15 | INFO    | src.generation |   692 frases em 698.7s (1.01s/frase)
+01:28:53 | INFO    | run_experiment |   F1 macro=0.8838  acc=0.9058  treino=36.0s  FLOPs totais=1.45e+15  latência=2.28ms
+01:28:53 | INFO    | run_experiment | ======================================================================
+01:28:53 | INFO    | run_experiment | [20/27] arm=tinybert_restricted ratio=25% seed=44
+01:29:21 | INFO    | run_experiment |   F1 macro=0.8924  acc=0.9159  treino=27.0s  FLOPs totais=2.89e+13  latência=2.29ms
+01:29:21 | INFO    | run_experiment | ======================================================================
+01:29:21 | INFO    | run_experiment | [21/27] arm=hybrid_restricted ratio=25% seed=44
+01:34:44 | INFO    | run_experiment |   F1 macro=0.8830  acc=0.9087  treino=320.0s  FLOPs totais=3.54e+13  latência=4.74ms
+01:34:44 | INFO    | run_experiment | ======================================================================
+01:34:44 | INFO    | run_experiment | [22/27] arm=tinybert_augmented ratio=50% seed=44
+01:34:45 | INFO    | src.generation |   Gerando 1380 frases com llama3.1:latest {'neutral': 857, 'positive': 355, 'negative': 168}
+01:58:04 | INFO    | src.generation |   1380 frases em 1399.5s (1.01s/frase)
+01:58:42 | INFO    | run_experiment |   F1 macro=0.8857  acc=0.9058  treino=36.0s  FLOPs totais=2.85e+15  latência=2.37ms
+01:58:42 | INFO    | run_experiment | ======================================================================
+01:58:42 | INFO    | run_experiment | [23/27] arm=tinybert_restricted ratio=50% seed=44
+01:59:01 | INFO    | run_experiment |   F1 macro=0.8731  acc=0.8942  treino=18.1s  FLOPs totais=1.93e+13  latência=2.34ms
+01:59:01 | INFO    | run_experiment | ======================================================================
+01:59:01 | INFO    | run_experiment | [24/27] arm=hybrid_restricted ratio=50% seed=44
+02:02:42 | INFO    | run_experiment |   F1 macro=0.8714  acc=0.8957  treino=217.8s  FLOPs totais=2.37e+13  latência=5.19ms
+02:02:42 | INFO    | run_experiment | ======================================================================
+02:02:42 | INFO    | run_experiment | [25/27] arm=tinybert_augmented ratio=75% seed=44
+02:02:42 | INFO    | src.generation |   Gerando 2071 frases com llama3.1:latest {'neutral': 1286, 'positive': 532, 'negative': 253}
+02:37:38 | INFO    | src.generation |   2071 frases em 2095.8s (1.01s/frase)
+02:38:15 | INFO    | run_experiment |   F1 macro=0.8698  acc=0.8855  treino=35.8s  FLOPs totais=4.25e+15  latência=2.36ms
+02:38:15 | INFO    | run_experiment | ======================================================================
+02:38:15 | INFO    | run_experiment | [26/27] arm=tinybert_restricted ratio=75% seed=44
+02:38:26 | INFO    | run_experiment |   F1 macro=0.7235  acc=0.8188  treino=9.4s  FLOPs totais=9.64e+12  latência=2.34ms
+02:38:26 | INFO    | run_experiment | ======================================================================
+02:38:26 | INFO    | run_experiment | [27/27] arm=hybrid_restricted ratio=75% seed=44
+02:40:20 | INFO    | run_experiment |   F1 macro=0.8253  acc=0.8594  treino=110.7s  FLOPs totais=1.18e+13  latência=5.23ms
+02:40:20 | INFO    | src.analysis | Analisando 36 runs de /Users/brenoortiz/Projects/TCC/results/runs.csv
+02:40:22 | INFO    | src.analysis | Relatório → /Users/brenoortiz/Projects/TCC/results/report.md
+{'train_runtime': '0.4058', 'train_samples_per_second': '157.7', 'train_steps_per_second': '4.928', 'train_loss': '1.104', 'epoch': '1'}
+{'train_runtime': '36.67', 'train_samples_per_second': '301.2', 'train_steps_per_second': '9.491', 'train_loss': '0.4308', 'epoch': '4'}
+{'train_runtime': '27.05', 'train_samples_per_second': '305.9', 'train_steps_per_second': '9.61', 'train_loss': '0.5612', 'epoch': '4'}
+{'train_runtime': '27.2', 'train_samples_per_second': '304.3', 'train_steps_per_second': '9.559', 'train_loss': '0.5263', 'epoch': '4'}
+{'train_runtime': '35.84', 'train_samples_per_second': '307.8', 'train_steps_per_second': '9.709', 'train_loss': '0.3765', 'epoch': '4'}
+{'train_runtime': '17.98', 'train_samples_per_second': '306.5', 'train_steps_per_second': '9.787', 'train_loss': '0.6711', 'epoch': '4'}
+{'train_runtime': '18.24', 'train_samples_per_second': '302.2', 'train_steps_per_second': '9.649', 'train_loss': '0.6218', 'epoch': '4'}
+{'train_runtime': '35.93', 'train_samples_per_second': '307.3', 'train_steps_per_second': '9.686', 'train_loss': '0.2996', 'epoch': '4'}
+{'train_runtime': '8.988', 'train_samples_per_second': '306.6', 'train_steps_per_second': '9.791', 'train_loss': '0.8497', 'epoch': '4'}
+{'train_runtime': '9.068', 'train_samples_per_second': '303.9', 'train_steps_per_second': '9.704', 'train_loss': '0.786', 'epoch': '4'}
+{'train_runtime': '35.92', 'train_samples_per_second': '307.5', 'train_steps_per_second': '9.689', 'train_loss': '0.4103', 'epoch': '4'}
+{'train_runtime': '26.79', 'train_samples_per_second': '308.9', 'train_steps_per_second': '9.704', 'train_loss': '0.5481', 'epoch': '4'}
+{'train_runtime': '26.92', 'train_samples_per_second': '307.4', 'train_steps_per_second': '9.658', 'train_loss': '0.5003', 'epoch': '4'}
+{'train_runtime': '35.65', 'train_samples_per_second': '309.4', 'train_steps_per_second': '9.76', 'train_loss': '0.3328', 'epoch': '4'}
+{'train_runtime': '17.94', 'train_samples_per_second': '307.3', 'train_steps_per_second': '9.813', 'train_loss': '0.6267', 'epoch': '4'}
+{'train_runtime': '18.04', 'train_samples_per_second': '305.6', 'train_steps_per_second': '9.757', 'train_loss': '0.5839', 'epoch': '4'}
+{'train_runtime': '36.12', 'train_samples_per_second': '305.7', 'train_steps_per_second': '9.635', 'train_loss': '0.2767', 'epoch': '4'}
+{'train_runtime': '8.98', 'train_samples_per_second': '306.9', 'train_steps_per_second': '9.8', 'train_loss': '0.8148', 'epoch': '4'}
+{'train_runtime': '9.014', 'train_samples_per_second': '305.7', 'train_steps_per_second': '9.763', 'train_loss': '0.8196', 'epoch': '4'}
+{'train_runtime': '35.92', 'train_samples_per_second': '307.5', 'train_steps_per_second': '9.689', 'train_loss': '0.423', 'epoch': '4'}
+{'train_runtime': '26.86', 'train_samples_per_second': '308.1', 'train_steps_per_second': '9.678', 'train_loss': '0.5257', 'epoch': '4'}
+{'train_runtime': '26.92', 'train_samples_per_second': '307.4', 'train_steps_per_second': '9.658', 'train_loss': '0.5132', 'epoch': '4'}
+{'train_runtime': '35.9', 'train_samples_per_second': '307.3', 'train_steps_per_second': '9.695', 'train_loss': '0.3483', 'epoch': '4'}
+{'train_runtime': '17.97', 'train_samples_per_second': '306.8', 'train_steps_per_second': '9.795', 'train_loss': '0.6463', 'epoch': '4'}
+{'train_runtime': '17.98', 'train_samples_per_second': '306.6', 'train_steps_per_second': '9.789', 'train_loss': '0.6374', 'epoch': '4'}
+{'train_runtime': '35.65', 'train_samples_per_second': '309.7', 'train_steps_per_second': '9.762', 'train_loss': '0.29', 'epoch': '4'}
+{'train_runtime': '9.222', 'train_samples_per_second': '298.9', 'train_steps_per_second': '9.543', 'train_loss': '0.8383', 'epoch': '4'}
+{'train_runtime': '9.035', 'train_samples_per_second': '305', 'train_steps_per_second': '9.74', 'train_loss': '0.7935', 'epoch': '4'}
