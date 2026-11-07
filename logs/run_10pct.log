@@ -1,0 +1,88 @@
+13:49:59 | INFO    | run_experiment | 9 run(s) a executar (0 já concluídos)
+13:49:59 | INFO    | src.bert | Carregando huawei-noah/TinyBERT_General_4L_312D …
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+13:49:59 | WARNING | huggingface_hub.utils._http | Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/71 [00:00<?, ?it/s]Loading weights: 100%|██████████| 71/71 [00:00<00:00, 54115.13it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: huawei-noah/TinyBERT_General_4L_312D
+Key                                        | Status     |  | 
+-------------------------------------------+------------+--+-
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+fit_denses.{0, 1, 2, 3, 4}.bias            | UNEXPECTED |  | 
+fit_denses.{0, 1, 2, 3, 4}.weight          | UNEXPECTED |  | 
+cls.predictions.decoder.weight             | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+13:50:00 | INFO    | run_experiment | Aquecendo backend (mps) …
+13:50:01 | INFO    | run_experiment | ======================================================================
+13:50:01 | INFO    | run_experiment | [1/9] arm=tinybert_augmented ratio=10% seed=42
+13:50:36 | WARNING | src.runner | Tempo de geração não medido — total_time_s fica NaN para tinybert_augmented. Rode measure_generation_cost.py ou defina GENERATION_SEC_PER_SENTENCE.
+13:50:36 | INFO    | run_experiment |   F1 macro=0.8857  acc=0.9072  treino=34.0s  FLOPs totais=8.21e+14  latência=2.25ms
+13:50:36 | INFO    | run_experiment | ======================================================================
+13:50:36 | INFO    | run_experiment | [2/9] arm=tinybert_restricted ratio=10% seed=42
+13:51:08 | INFO    | run_experiment |   F1 macro=0.8827  acc=0.9043  treino=30.9s  FLOPs totais=3.47e+13  latência=2.28ms
+13:51:08 | INFO    | run_experiment | ======================================================================
+13:51:08 | INFO    | run_experiment | [3/9] arm=hybrid_restricted ratio=10% seed=42
+/Users/brenoortiz/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/multiprocessing/resource_tracker.py:479: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown: {'/loky-18183-te43d3o6'}
+  warnings.warn(
+13:57:57 | INFO    | run_experiment | 7 run(s) a executar (2 já concluídos)
+13:57:57 | INFO    | src.bert | Carregando huawei-noah/TinyBERT_General_4L_312D …
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+13:57:57 | WARNING | huggingface_hub.utils._http | Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/71 [00:00<?, ?it/s]Loading weights: 100%|██████████| 71/71 [00:00<00:00, 41673.05it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: huawei-noah/TinyBERT_General_4L_312D
+Key                                        | Status     |  | 
+-------------------------------------------+------------+--+-
+fit_denses.{0, 1, 2, 3, 4}.bias            | UNEXPECTED |  | 
+fit_denses.{0, 1, 2, 3, 4}.weight          | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.predictions.decoder.weight             | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+13:57:58 | INFO    | run_experiment | Aquecendo backend (mps) …
+13:57:59 | INFO    | run_experiment | ======================================================================
+13:57:59 | INFO    | run_experiment | [1/7] arm=hybrid_restricted ratio=10% seed=42
+14:03:54 | INFO    | run_experiment |   F1 macro=0.8926  acc=0.9116  treino=352.6s  FLOPs totais=4.25e+13  latência=4.83ms
+14:03:54 | INFO    | run_experiment | ======================================================================
+14:03:54 | INFO    | run_experiment | [2/7] arm=tinybert_augmented ratio=10% seed=43
+14:04:30 | WARNING | src.runner | Tempo de geração não medido — total_time_s fica NaN para tinybert_augmented. Rode measure_generation_cost.py ou defina GENERATION_SEC_PER_SENTENCE.
+14:04:30 | INFO    | run_experiment |   F1 macro=0.8995  acc=0.9174  treino=34.5s  FLOPs totais=8.21e+14  latência=2.27ms
+14:04:30 | INFO    | run_experiment | ======================================================================
+14:04:30 | INFO    | run_experiment | [3/7] arm=tinybert_restricted ratio=10% seed=43
+14:05:03 | INFO    | run_experiment |   F1 macro=0.8850  acc=0.9072  treino=30.9s  FLOPs totais=3.47e+13  latência=2.28ms
+14:05:03 | INFO    | run_experiment | ======================================================================
+14:05:03 | INFO    | run_experiment | [4/7] arm=hybrid_restricted ratio=10% seed=43
+14:10:57 | INFO    | run_experiment |   F1 macro=0.9060  acc=0.9217  treino=351.7s  FLOPs totais=4.25e+13  latência=4.83ms
+14:10:57 | INFO    | run_experiment | ======================================================================
+14:10:57 | INFO    | run_experiment | [5/7] arm=tinybert_augmented ratio=10% seed=44
+14:11:33 | WARNING | src.runner | Tempo de geração não medido — total_time_s fica NaN para tinybert_augmented. Rode measure_generation_cost.py ou defina GENERATION_SEC_PER_SENTENCE.
+14:11:33 | INFO    | run_experiment |   F1 macro=0.8982  acc=0.9188  treino=34.5s  FLOPs totais=8.21e+14  latência=2.29ms
+14:11:33 | INFO    | run_experiment | ======================================================================
+14:11:33 | INFO    | run_experiment | [6/7] arm=tinybert_restricted ratio=10% seed=44
+14:12:05 | INFO    | run_experiment |   F1 macro=0.8950  acc=0.9174  treino=30.9s  FLOPs totais=3.47e+13  latência=2.29ms
+14:12:05 | INFO    | run_experiment | ======================================================================
+14:12:05 | INFO    | run_experiment | [7/7] arm=hybrid_restricted ratio=10% seed=44
+14:18:01 | INFO    | run_experiment |   F1 macro=0.8915  acc=0.9116  treino=353.0s  FLOPs totais=4.25e+13  latência=4.95ms
+14:18:01 | INFO    | src.analysis | Analisando 9 runs de /Users/brenoortiz/Projects/TCC/results/runs.csv
+14:18:02 | INFO    | src.analysis | Relatório → /Users/brenoortiz/Projects/TCC/results/report.md
+{'train_runtime': '0.2917', 'train_samples_per_second': '219.4', 'train_steps_per_second': '6.856', 'train_loss': '1.104', 'epoch': '1'}
+{'train_runtime': '30.71', 'train_samples_per_second': '323.3', 'train_steps_per_second': '10.16', 'train_loss': '0.4881', 'epoch': '4'}
+{'train_runtime': '34.37', 'train_samples_per_second': '321.1', 'train_steps_per_second': '10.12', 'train_loss': '0.4589', 'epoch': '4'}
+{'train_runtime': '30.79', 'train_samples_per_second': '322.5', 'train_steps_per_second': '10.13', 'train_loss': '0.5054', 'epoch': '4'}
+{'train_runtime': '31.14', 'train_samples_per_second': '318.8', 'train_steps_per_second': '10.02', 'train_loss': '0.4616', 'epoch': '4'}
+{'train_runtime': '34.33', 'train_samples_per_second': '321.5', 'train_steps_per_second': '10.14', 'train_loss': '0.4591', 'epoch': '4'}
+{'train_runtime': '30.71', 'train_samples_per_second': '323.3', 'train_steps_per_second': '10.16', 'train_loss': '0.4738', 'epoch': '4'}
+{'train_runtime': '30.65', 'train_samples_per_second': '323.9', 'train_steps_per_second': '10.18', 'train_loss': '0.4733', 'epoch': '4'}

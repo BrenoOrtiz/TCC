@@ -1,0 +1,42 @@
+12:52:52 | INFO    | run_experiment | 48 run(s) a executar (0 já concluídos)
+12:52:52 | INFO    | src.bert | Carregando huawei-noah/TinyBERT_General_4L_312D …
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+12:52:52 | WARNING | huggingface_hub.utils._http | Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/71 [00:00<?, ?it/s]Loading weights: 100%|██████████| 71/71 [00:00<00:00, 51790.54it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: huawei-noah/TinyBERT_General_4L_312D
+Key                                        | Status     |  | 
+-------------------------------------------+------------+--+-
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+fit_denses.{0, 1, 2, 3, 4}.bias            | UNEXPECTED |  | 
+fit_denses.{0, 1, 2, 3, 4}.weight          | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.predictions.decoder.weight             | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+12:52:54 | INFO    | run_experiment | Aquecendo backend (mps) …
+12:52:55 | INFO    | run_experiment | ======================================================================
+12:52:55 | INFO    | run_experiment | [1/48] arm=tinybert_full ratio=0% seed=42
+12:53:33 | INFO    | run_experiment |   F1 macro=0.9091  acc=0.9203  treino=36.8s  FLOPs totais=3.86e+13  latência=2.46ms
+12:53:33 | INFO    | run_experiment | ======================================================================
+12:53:33 | INFO    | run_experiment | [2/48] arm=tinybert_restricted ratio=10% seed=42
+12:54:07 | INFO    | run_experiment |   F1 macro=0.8827  acc=0.9043  treino=33.1s  FLOPs totais=3.47e+13  latência=2.34ms
+12:54:07 | INFO    | run_experiment | ======================================================================
+12:54:07 | INFO    | run_experiment | [3/48] arm=tinybert_augmented ratio=10% seed=42
+12:54:46 | WARNING | src.runner | Tempo de geração não medido — total_time_s fica NaN para tinybert_augmented. Rode measure_generation_cost.py ou defina GENERATION_SEC_PER_SENTENCE.
+12:54:46 | INFO    | run_experiment |   F1 macro=0.8857  acc=0.9072  treino=36.9s  FLOPs totais=8.21e+14  latência=2.41ms
+12:54:46 | INFO    | run_experiment | ======================================================================
+12:54:46 | INFO    | run_experiment | [4/48] arm=textcnn_restricted ratio=10% seed=42
+12:55:51 | INFO    | run_experiment |   F1 macro=0.7459  acc=0.7971  treino=64.6s  FLOPs totais=1.54e+12  latência=1.02ms
+12:55:51 | INFO    | run_experiment | ======================================================================
+12:55:51 | INFO    | run_experiment | [5/48] arm=hybrid_restricted ratio=10% seed=42
+13:00:55 | INFO    | run_experiment |   F1 macro=0.8861  acc=0.9087  treino=365.4s  FLOPs totais=4.25e+13  latência=5.05ms
+13:00:55 | INFO    | run_experiment | ======================================================================
+13:00:55 | INFO    | run_experiment | [6/48] arm=hybrid_augmented ratio=10% seed=42
+/Users/brenoortiz/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/multiprocessing/resource_tracker.py:479: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown: {'/loky-8383-xi3k9n7_'}
+  warnings.warn(
