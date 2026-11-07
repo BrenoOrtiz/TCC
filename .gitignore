@@ -3,4 +3,5 @@ __pycache__/
 results_smoke/
 results/_work/
 *.log
+!logs/*.log
 .DS_Store

@@ -1,0 +1,96 @@
+13:03:06 | INFO    | run_experiment | 17 run(s) a executar (1 já concluídos)
+13:03:06 | INFO    | src.bert | Carregando huawei-noah/TinyBERT_General_4L_312D …
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+13:03:07 | WARNING | huggingface_hub.utils._http | Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/71 [00:00<?, ?it/s]Loading weights: 100%|██████████| 71/71 [00:00<00:00, 50108.63it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: huawei-noah/TinyBERT_General_4L_312D
+Key                                        | Status     |  | 
+-------------------------------------------+------------+--+-
+fit_denses.{0, 1, 2, 3, 4}.bias            | UNEXPECTED |  | 
+fit_denses.{0, 1, 2, 3, 4}.weight          | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.predictions.decoder.weight             | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+13:03:08 | INFO    | run_experiment | Aquecendo backend (mps) …
+13:03:09 | INFO    | run_experiment | ======================================================================
+13:03:09 | INFO    | run_experiment | [1/17] arm=tinybert_restricted ratio=50% seed=42
+13:03:30 | INFO    | run_experiment |   F1 macro=0.8655  acc=0.8899  treino=19.7s  FLOPs totais=1.93e+13  latência=2.43ms
+13:03:30 | INFO    | run_experiment | ======================================================================
+13:03:30 | INFO    | run_experiment | [2/17] arm=tinybert_augmented ratio=50% seed=42
+13:04:09 | WARNING | src.runner | Tempo de geração não medido — total_time_s fica NaN para tinybert_augmented. Rode measure_generation_cost.py ou defina GENERATION_SEC_PER_SENTENCE.
+13:04:09 | INFO    | run_experiment |   F1 macro=0.8729  acc=0.8971  treino=37.4s  FLOPs totais=3.94e+15  latência=2.42ms
+13:04:09 | INFO    | run_experiment | ======================================================================
+13:04:09 | INFO    | run_experiment | [3/17] arm=textcnn_restricted ratio=50% seed=42
+13:04:47 | INFO    | run_experiment |   F1 macro=0.6800  acc=0.7551  treino=37.3s  FLOPs totais=8.7e+11  latência=1.02ms
+13:04:47 | INFO    | run_experiment | ======================================================================
+13:04:47 | INFO    | run_experiment | [4/17] arm=hybrid_restricted ratio=50% seed=42
+13:07:41 | INFO    | run_experiment |   F1 macro=0.8778  acc=0.9014  treino=208.7s  FLOPs totais=2.37e+13  latência=5.07ms
+13:07:41 | INFO    | run_experiment | ======================================================================
+13:07:41 | INFO    | run_experiment | [5/17] arm=hybrid_augmented ratio=50% seed=42
+13:14:24 | WARNING | src.runner | Tempo de geração não medido — total_time_s fica NaN para hybrid_augmented. Rode measure_generation_cost.py ou defina GENERATION_SEC_PER_SENTENCE.
+13:14:24 | INFO    | run_experiment |   F1 macro=0.8784  acc=0.8971  treino=400.1s  FLOPs totais=3.95e+15  latência=5.13ms
+13:14:24 | INFO    | run_experiment | ======================================================================
+13:14:24 | INFO    | run_experiment | [6/17] arm=tinybert_full ratio=0% seed=43
+13:15:03 | INFO    | run_experiment |   F1 macro=0.9065  acc=0.9203  treino=36.7s  FLOPs totais=3.86e+13  latência=2.47ms
+13:15:03 | INFO    | run_experiment | ======================================================================
+13:15:03 | INFO    | run_experiment | [7/17] arm=tinybert_restricted ratio=50% seed=43
+13:15:23 | INFO    | run_experiment |   F1 macro=0.8722  acc=0.8957  treino=18.5s  FLOPs totais=1.93e+13  latência=2.57ms
+13:15:23 | INFO    | run_experiment | ======================================================================
+13:15:23 | INFO    | run_experiment | [8/17] arm=tinybert_augmented ratio=50% seed=43
+13:16:01 | WARNING | src.runner | Tempo de geração não medido — total_time_s fica NaN para tinybert_augmented. Rode measure_generation_cost.py ou defina GENERATION_SEC_PER_SENTENCE.
+13:16:01 | INFO    | run_experiment |   F1 macro=0.8845  acc=0.9029  treino=36.7s  FLOPs totais=3.94e+15  latência=2.65ms
+13:16:01 | INFO    | run_experiment | ======================================================================
+13:16:01 | INFO    | run_experiment | [9/17] arm=textcnn_restricted ratio=50% seed=43
+13:16:40 | INFO    | run_experiment |   F1 macro=0.6928  acc=0.7754  treino=38.5s  FLOPs totais=8.7e+11  latência=1.02ms
+13:16:40 | INFO    | run_experiment | ======================================================================
+13:16:40 | INFO    | run_experiment | [10/17] arm=hybrid_restricted ratio=50% seed=43
+13:19:33 | INFO    | run_experiment |   F1 macro=0.8633  acc=0.8899  treino=208.7s  FLOPs totais=2.37e+13  latência=4.90ms
+13:19:33 | INFO    | run_experiment | ======================================================================
+13:19:33 | INFO    | run_experiment | [11/17] arm=hybrid_augmented ratio=50% seed=43
+13:26:04 | WARNING | src.runner | Tempo de geração não medido — total_time_s fica NaN para hybrid_augmented. Rode measure_generation_cost.py ou defina GENERATION_SEC_PER_SENTENCE.
+13:26:04 | INFO    | run_experiment |   F1 macro=0.8699  acc=0.8928  treino=387.6s  FLOPs totais=3.95e+15  latência=4.82ms
+13:26:04 | INFO    | run_experiment | ======================================================================
+13:26:04 | INFO    | run_experiment | [12/17] arm=tinybert_full ratio=0% seed=44
+13:26:39 | INFO    | run_experiment |   F1 macro=0.9074  acc=0.9217  treino=34.2s  FLOPs totais=3.86e+13  latência=2.27ms
+13:26:39 | INFO    | run_experiment | ======================================================================
+13:26:39 | INFO    | run_experiment | [13/17] arm=tinybert_restricted ratio=50% seed=44
+13:26:58 | INFO    | run_experiment |   F1 macro=0.8731  acc=0.8942  treino=17.2s  FLOPs totais=1.93e+13  latência=2.30ms
+13:26:58 | INFO    | run_experiment | ======================================================================
+13:26:58 | INFO    | run_experiment | [14/17] arm=tinybert_augmented ratio=50% seed=44
+13:27:33 | WARNING | src.runner | Tempo de geração não medido — total_time_s fica NaN para tinybert_augmented. Rode measure_generation_cost.py ou defina GENERATION_SEC_PER_SENTENCE.
+13:27:33 | INFO    | run_experiment |   F1 macro=0.8846  acc=0.9029  treino=34.2s  FLOPs totais=3.94e+15  latência=2.32ms
+13:27:33 | INFO    | run_experiment | ======================================================================
+13:27:33 | INFO    | run_experiment | [15/17] arm=textcnn_restricted ratio=50% seed=44
+13:28:11 | INFO    | run_experiment |   F1 macro=0.7036  acc=0.7870  treino=36.8s  FLOPs totais=8.7e+11  latência=1.01ms
+13:28:11 | INFO    | run_experiment | ======================================================================
+13:28:11 | INFO    | run_experiment | [16/17] arm=hybrid_restricted ratio=50% seed=44
+13:31:01 | INFO    | run_experiment |   F1 macro=0.8774  acc=0.8971  treino=203.6s  FLOPs totais=2.37e+13  latência=4.83ms
+13:31:01 | INFO    | run_experiment | ======================================================================
+13:31:01 | INFO    | run_experiment | [17/17] arm=hybrid_augmented ratio=50% seed=44
+13:37:31 | WARNING | src.runner | Tempo de geração não medido — total_time_s fica NaN para hybrid_augmented. Rode measure_generation_cost.py ou defina GENERATION_SEC_PER_SENTENCE.
+13:37:31 | INFO    | run_experiment |   F1 macro=0.8692  acc=0.8957  treino=388.0s  FLOPs totais=3.95e+15  latência=4.83ms
+13:37:31 | INFO    | src.analysis | Analisando 18 runs de /Users/brenoortiz/Projects/TCC/results/runs.csv
+13:37:32 | INFO    | src.analysis | Relatório → /Users/brenoortiz/Projects/TCC/results/report.md
+{'train_runtime': '0.33', 'train_samples_per_second': '193.9', 'train_steps_per_second': '6.06', 'train_loss': '1.09', 'epoch': '1'}
+{'train_runtime': '19.54', 'train_samples_per_second': '282.1', 'train_steps_per_second': '9.006', 'train_loss': '0.6711', 'epoch': '4'}
+{'train_runtime': '37.26', 'train_samples_per_second': '296.1', 'train_steps_per_second': '9.34', 'train_loss': '0.3841', 'epoch': '4'}
+{'train_runtime': '19', 'train_samples_per_second': '290.2', 'train_steps_per_second': '9.265', 'train_loss': '0.6125', 'epoch': '4'}
+{'train_runtime': '36.75', 'train_samples_per_second': '300.2', 'train_steps_per_second': '9.469', 'train_loss': '0.3103', 'epoch': '4'}
+{'train_runtime': '36.55', 'train_samples_per_second': '301.8', 'train_steps_per_second': '9.521', 'train_loss': '0.4703', 'epoch': '4'}
+{'train_runtime': '18.36', 'train_samples_per_second': '300.2', 'train_steps_per_second': '9.585', 'train_loss': '0.6267', 'epoch': '4'}
+{'train_runtime': '36.54', 'train_samples_per_second': '301.9', 'train_steps_per_second': '9.524', 'train_loss': '0.3451', 'epoch': '4'}
+{'train_runtime': '17.4', 'train_samples_per_second': '316.9', 'train_steps_per_second': '10.12', 'train_loss': '0.5628', 'epoch': '4'}
+{'train_runtime': '34.14', 'train_samples_per_second': '323.1', 'train_steps_per_second': '10.19', 'train_loss': '0.3246', 'epoch': '4'}
+{'train_runtime': '34.03', 'train_samples_per_second': '324.2', 'train_steps_per_second': '10.23', 'train_loss': '0.4433', 'epoch': '4'}
+{'train_runtime': '17.12', 'train_samples_per_second': '322', 'train_steps_per_second': '10.28', 'train_loss': '0.6463', 'epoch': '4'}
+{'train_runtime': '34.11', 'train_samples_per_second': '323.5', 'train_steps_per_second': '10.2', 'train_loss': '0.3547', 'epoch': '4'}
+{'train_runtime': '17.1', 'train_samples_per_second': '322.3', 'train_steps_per_second': '10.29', 'train_loss': '0.5978', 'epoch': '4'}
+{'train_runtime': '33.94', 'train_samples_per_second': '325.1', 'train_steps_per_second': '10.26', 'train_loss': '0.3182', 'epoch': '4'}
