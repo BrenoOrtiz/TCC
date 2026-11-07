@@ -167,5 +167,6 @@ Frequência entre runs:
 - `fig_cost_breakdown.png` — composição do custo
 - `fig_delta_f1_forest.png` — ΔF1 pareado com IC 95%
 - `fig_ce_plane.png` — plano custo-efetividade TL vs DA (ΔF1 × razão de custo), um ponto por escassez
-- `fig_cost_by_ratio.png` — custo total (tempo e FLOPs) de cada braço ao longo da escassez
+- `fig_cost_by_ratio.png` — custo total (tempo e FLOPs) de cada braço ao longo da escassez; no painel de tempo, referência de anotação humana (4.6 s/título × nº de títulos sintéticos do cenário)
+- `fig_time_f1_human.png` — tempo total × F1 de TL, DA, TinyBERT escasso e anotação humana (anotação humana como resultado ótimo de referência, sem F1 definido)
 - `fig_delta_f1_by_ratio.png` — ganho de TL e DA sobre o TinyBERT escasso e confronto TL − DA por escassez

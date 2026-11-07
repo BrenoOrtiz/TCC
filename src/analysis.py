@@ -24,6 +24,7 @@ from scipy.stats import wilcoxon  # noqa: E402
 from config import (  # noqa: E402
     BOOTSTRAP_ITERATIONS,
     COST_METRICS,
+    HUMAN_ANNOTATION_SEC_PER_SAMPLE,
     LABEL_NAMES,
     NON_INFERIORITY_MARGIN,
     PRIMARY_CONTRAST,
@@ -264,6 +265,18 @@ def _first_column(axes) -> list[plt.Axes]:
     return [ax for ax in axes if ax.get_subplotspec().is_first_col()]
 
 
+def _human_annotation(runs: pd.DataFrame) -> pd.DataFrame:
+    """Tempo para anotadores humanos rotularem o mesmo nº de títulos que o DA gera, por ratio."""
+    aug = runs[(runs["arm"] == "tinybert_augmented") & (runs["ratio"] > 0)]
+    n = aug.groupby("ratio")["n_synthetic"].mean().round().astype(int)
+    return pd.DataFrame({"ratio": n.index, "n": n.to_numpy(),
+                         "seconds": n.to_numpy() * HUMAN_ANNOTATION_SEC_PER_SAMPLE})
+
+
+HUMAN_STYLE = {"color": INK, "marker": "X", "linestyle": "--"}
+HUMAN_LABEL = f"Anotação humana ({HUMAN_ANNOTATION_SEC_PER_SAMPLE:g} s/título)"
+
+
 def _pareto(points: pd.DataFrame, cost: str) -> pd.DataFrame:
     """Pontos não-dominados (menor custo, maior F1)."""
     front, best = [], -np.inf
@@ -291,6 +304,8 @@ def plot_f1_vs_cost(runs: pd.DataFrame, cost: str, out: Path) -> None:
     if stats[cost].isna().all():
         return
     full = stats[stats["arm"] == "tinybert_full"]
+    # anotação humana só entra no eixo de tempo total (alternativa à geração LLM, sem FLOPs)
+    human = _human_annotation(runs) if cost == "total_time_s" else pd.DataFrame(columns=["ratio"])
     # y independente por painel: a comparação aqui é dentro do cenário (entre cenários: fig_f1_by_ratio)
     fig, axes = _figure(len(ratios), width=5.4, height=4.2, sharey=False, max_cols=2)
     for ax, ratio in zip(axes, ratios):
@@ -310,14 +325,26 @@ def plot_f1_vs_cost(runs: pd.DataFrame, cost: str, out: Path) -> None:
             ax.annotate("TinyBERT 100% real", (0.02, full["f1_macro"].iloc[0]), xycoords=("axes fraction", "data"),
                         textcoords="offset points", xytext=(0, 4), fontsize=8, color=INK_2)
         ax.set_xscale("log")
+        h = human[human["ratio"] == ratio]
+        if not h.empty:
+            secs, n = h["seconds"].iloc[0], h["n"].iloc[0]
+            ax.axvline(secs, color=HUMAN_STYLE["color"], linestyle=HUMAN_STYLE["linestyle"], linewidth=1.2,
+                       label=HUMAN_LABEL, zorder=2)
+            ax.annotate(f"anotação humana\n{n} títulos ≈ {secs / 60:.0f} min", (secs, 0.03),
+                        xycoords=("data", "axes fraction"), textcoords="offset points", xytext=(-4, 0),
+                        ha="right", va="bottom", fontsize=8, color=INK,
+                        bbox={"facecolor": SURFACE, "edgecolor": "none", "pad": 1})
+            ax.set_xlim(pts[cost].min() / 1.6, max(pts[cost].max(), secs) * 1.6)
         _log_cost_axis(ax.xaxis, cost)
         ax.set_title(f"{ratio}% dos dados reais removidos", fontsize=10, color=INK, loc="left")
         ax.set_xlabel(COST_LABELS.get(cost, cost) + " — escala log", fontsize=9, color=INK_2)
     for ax in _first_column(axes):
         ax.set_ylabel("F1 macro (média ± dp entre seeds)", fontsize=9, color=INK_2)
     handles, labels = axes[0].get_legend_handles_labels()
+    order = sorted(range(len(labels)), key=lambda i: labels[i] == HUMAN_LABEL)  # referência humana por último
+    handles, labels = [handles[i] for i in order], [labels[i] for i in order]
     legend_h = 0.5 / fig.get_figheight()  # faixa da legenda (0,5 pol.) independente da nº de linhas
-    fig.legend(handles, labels, loc="lower center", ncol=3, frameon=False, fontsize=9,
+    fig.legend(handles, labels, loc="lower center", ncol=min(len(labels), 4), frameon=False, fontsize=9,
                labelcolor=INK, bbox_to_anchor=(0.5, 0))
     fig.suptitle("Performance × custo computacional (pontilhado = fronteira de Pareto)",
                  x=0.01, ha="left", fontsize=11, color=INK)
@@ -512,6 +539,16 @@ def plot_cost_by_ratio(runs: pd.DataFrame, out: Path) -> None:
             last = vals.iloc[-1]
             text = f"{last:.1f} min" if col == "total_time_s" else f"{last / 1e12:,.0f} TFLOP"
             ends.append((s["ratio"].iloc[-1], last, text))
+        if col == "total_time_s":
+            h = _human_annotation(runs)
+            vals = h["seconds"] * scale
+            ax.plot(h["ratio"], vals, color=HUMAN_STYLE["color"], marker=HUMAN_STYLE["marker"],
+                    linestyle=HUMAN_STYLE["linestyle"], markersize=8, linewidth=1.5,
+                    markeredgecolor=SURFACE, markeredgewidth=1.0, label=HUMAN_LABEL)
+            for r, v, n in zip(h["ratio"], vals, h["n"]):
+                ax.annotate(f"{n} títulos", (r, v), textcoords="offset points", xytext=(0, 8),
+                            ha="center", fontsize=7, color=INK_2)
+            ends.append((h["ratio"].iloc[-1], vals.iloc[-1], f"{vals.iloc[-1]:.0f} min"))
         ax.set_yscale("log")
         _log_cost_axis(ax.yaxis, col, time_unit="min")
         ax.set_xticks(ratios)
@@ -520,7 +557,7 @@ def plot_cost_by_ratio(runs: pd.DataFrame, out: Path) -> None:
         ax.set_xlabel("% dos dados reais removidos (escassez)", fontsize=9, color=INK_2)
         ax.set_title(title, fontsize=10, color=INK, loc="left")
     handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", ncol=len(arms), frameon=False, fontsize=9,
+    fig.legend(handles, labels, loc="lower center", ncol=len(labels), frameon=False, fontsize=9,
                labelcolor=INK, bbox_to_anchor=(0.5, -0.01))
     fig.suptitle("Custo computacional médio por nível de escassez (rótulo = valor no cenário mais escasso)",
                  x=0.01, ha="left", fontsize=11, color=INK)
@@ -569,6 +606,101 @@ def plot_delta_by_ratio(con: pd.DataFrame, out: Path) -> None:
     fig.tight_layout(rect=(0, 0, 1, 0.94))
     fig.savefig(out, dpi=200, facecolor=SURFACE)
     plt.close(fig)
+
+
+def plot_time_f1_human(runs: pd.DataFrame, out: Path) -> None:
+    """Tempo total e F1 lado a lado, uma linha por método, agrupadas por cenário.
+
+    Anotação humana (hipotética): tempo = n títulos × s/título + treino do TinyBERT no
+    dataset completo (mesmo tamanho do augmentado); F1 não definido — exibido só como resultado ótimo.
+    """
+    human = _human_annotation(runs).set_index("ratio")
+    stats = runs[runs["ratio"] > 0].groupby(["arm", "ratio"]).agg(
+        f1=("f1_macro", "mean"), f1_std=("f1_macro", "std"),
+        time_s=("total_time_s", "mean"), train_s=("train_time_s", "mean"),
+    )
+    order = [a for a in ("tinybert_restricted", "hybrid_restricted", "tinybert_augmented")
+             if a in stats.index.get_level_values("arm")]
+    ratios = sorted(stats.index.get_level_values("ratio").unique())
+
+    rows = []  # (y, ratio, label, color, marker, minutos, f1, f1_std, referência humana)
+    step = len(order) + 2
+    for i, ratio in enumerate(ratios):
+        base = i * step
+        for j, arm in enumerate(order):
+            r = stats.loc[(arm, ratio)]
+            rows.append((base + j, ratio, ARM_LABELS[arm], ARM_STYLE[arm]["color"], ARM_STYLE[arm]["marker"],
+                         r["time_s"] / 60, r["f1"], r["f1_std"], False))
+        train_full = stats.loc[("tinybert_augmented", ratio), "train_s"] if "tinybert_augmented" in order else 0
+        h_min = (human.loc[ratio, "seconds"] + train_full) / 60
+        rows.append((base + len(order), ratio, f"Anotação humana ({int(human.loc[ratio, 'n'])} títulos)",
+                     INK, HUMAN_STYLE["marker"], h_min, np.nan, np.nan, True))
+    d = pd.DataFrame(rows, columns=["y", "ratio", "label", "color", "marker", "minutes", "f1", "f1_std", "assumed"])
+
+    fig, (ax_t, ax_f) = plt.subplots(1, 2, figsize=(12, 0.4 * len(d) + 3.0), sharey=True,
+                                     gridspec_kw={"width_ratios": [1.5, 1], "wspace": 0.05})
+    fig.patch.set_facecolor(SURFACE)
+    for ax in (ax_t, ax_f):
+        _style(ax)
+        ax.grid(False, axis="y")
+        for i, ratio in enumerate(ratios):  # faixa alternada separa os cenários
+            if i % 2 == 0:
+                ax.axhspan(i * step - 1.6, i * step + len(order) + 0.6, color=GRID, alpha=0.45, linewidth=0, zorder=0)
+
+    # Tempo total: barras lineares com o valor escrito
+    t_max = d["minutes"].max()
+    ax_t.barh(d["y"], d["minutes"], color=d["color"], height=0.7, zorder=2)
+    for _, r in d.iterrows():
+        txt = f"{r['minutes']:.1f} min" if r["minutes"] < 10 else f"{r['minutes']:.0f} min"
+        ax_t.text(r["minutes"] + t_max * 0.01, r["y"], txt, va="center", fontsize=8.5,
+                  color=INK, fontweight="bold" if r["assumed"] else "normal")
+    ax_t.set_xlim(0, t_max * 1.15)
+    ax_t.set_xlabel("Tempo total (min) — treino + geração LLM, ou anotação + treino", fontsize=9, color=INK_2)
+    ax_t.set_title("Tempo total", fontsize=10, color=INK, loc="left")
+
+    # F1: ponto ± dp com o valor escrito
+    # F1: barras com eixo recortado (todos os valores ficam acima de x_lo) e valor escrito
+    x_lo = np.floor((d["f1"].min() - 0.05) * 10) / 10
+    x_hi = 1.0
+    for _, r in d.iterrows():
+        if r["assumed"]:  # anotação humana: sem F1 numérico, só a referência de resultado ótimo
+            ax_f.barh(r["y"], x_hi - x_lo, left=x_lo, height=0.7, zorder=2, color=SURFACE,
+                      edgecolor=INK, hatch="///", linewidth=1.2)
+            ax_f.text((x_lo + x_hi) / 2, r["y"], "resultado ótimo (referência)", ha="center", va="center",
+                      fontsize=8.5, color=INK, fontweight="bold", zorder=4,
+                      bbox={"facecolor": SURFACE, "edgecolor": "none", "pad": 2})
+            continue
+        ax_f.barh(r["y"], r["f1"] - x_lo, left=x_lo, height=0.7, zorder=2, color=r["color"])
+        if not np.isnan(r["f1_std"]):
+            ax_f.errorbar(r["f1"], r["y"], xerr=r["f1_std"], color=INK_2, linewidth=1, capsize=2.5,
+                          fmt="none", zorder=3)
+        right = r["f1"] + (0 if np.isnan(r["f1_std"]) else r["f1_std"])
+        ax_f.text(right + 0.004, r["y"], f"{r['f1']:.3f}", va="center", fontsize=8.5, color=INK)
+    ax_f.set_xlim(x_lo, x_hi)
+    ax_f.set_xlabel(f"F1 macro (média ± dp entre seeds) — eixo começa em {x_lo:g}", fontsize=9, color=INK_2)
+    ax_f.set_title("F1 macro", fontsize=10, color=INK, loc="left")
+
+    ax_t.set_yticks(d["y"], d["label"], fontsize=9)
+    for tick, color in zip(ax_t.get_yticklabels(), d["color"]):
+        tick.set_color(color)
+    ax_t.set_ylim(d["y"].max() + 0.8, -1.8)  # invertido, com espaço para o 1º cabeçalho
+    ax_t.tick_params(axis="y", length=0)
+    ax_f.tick_params(axis="y", length=0)
+    for i, ratio in enumerate(ratios):  # cabeçalho de cada grupo na linha vazia acima dele
+        ax_t.text(0.005, i * step - 1.05, f"Cenário: {ratio}% dos dados reais removidos",
+                  transform=ax_t.get_yaxis_transform(), ha="left", va="center",
+                  fontsize=10, color=INK, fontweight="bold")
+
+    fig.suptitle("Tempo total × F1 por cenário de escassez: TL, DA e anotação humana",
+                 x=0.01, y=0.985, ha="left", fontsize=12, color=INK)
+    fig.text(0.01, 1 - 0.5 / fig.get_figheight(),
+             f"Anotação humana = títulos removidos × {HUMAN_ANNOTATION_SEC_PER_SAMPLE:g} s + treino do TinyBERT no "
+             "dataset completo. No F1, a anotação humana aparece só como resultado ótimo de referência (sem valor definido).",
+             ha="left", fontsize=8.5, color=INK_2)
+    fig.subplots_adjust(left=0.2, right=0.98, top=1 - 0.95 / fig.get_figheight(), bottom=0.6 / fig.get_figheight())
+    fig.savefig(out, dpi=200, facecolor=SURFACE)
+    plt.close(fig)
+
 
 
 # ---------------------------------------------------------------------------
@@ -677,7 +809,11 @@ def write_report(runs: pd.DataFrame, con: pd.DataFrame, eff: pd.DataFrame, resul
         "- `fig_cost_breakdown.png` — composição do custo",
         "- `fig_delta_f1_forest.png` — ΔF1 pareado com IC 95%",
         "- `fig_ce_plane.png` — plano custo-efetividade TL vs DA (ΔF1 × razão de custo), um ponto por escassez",
-        "- `fig_cost_by_ratio.png` — custo total (tempo e FLOPs) de cada braço ao longo da escassez",
+        "- `fig_cost_by_ratio.png` — custo total (tempo e FLOPs) de cada braço ao longo da escassez; "
+        f"no painel de tempo, referência de anotação humana ({HUMAN_ANNOTATION_SEC_PER_SAMPLE:g} s/título "
+        "× nº de títulos sintéticos do cenário)",
+        "- `fig_time_f1_human.png` — tempo total × F1 de TL, DA, TinyBERT escasso e anotação humana "
+        "(anotação humana como resultado ótimo de referência, sem F1 definido)",
         "- `fig_delta_f1_by_ratio.png` — ganho de TL e DA sobre o TinyBERT escasso e confronto TL − DA por escassez",
         "",
     ]
@@ -714,5 +850,6 @@ def run(results_dir: Path) -> None:
     plot_ce_plane(con, results_dir / "fig_ce_plane.png")
     plot_cost_by_ratio(runs, results_dir / "fig_cost_by_ratio.png")
     plot_delta_by_ratio(con, results_dir / "fig_delta_f1_by_ratio.png")
+    plot_time_f1_human(runs, results_dir / "fig_time_f1_human.png")
     write_report(runs, con, eff, results_dir)
     logger.info("Relatório → %s", results_dir / "report.md")
