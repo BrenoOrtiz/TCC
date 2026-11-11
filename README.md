@@ -118,7 +118,7 @@ TCC/
 ├── .gitignore                   # exclui .venv, caches, results_smoke/ e results/_work/
 ├── src/                         # código-fonte do pipeline
 ├── data/                        # dados brutos, splits, sintéticos e referência
-├── results/                     # resultados finais (36 runs): métricas, predições, figuras, relatórios
+├── results/                     # resultados finais (36 runs + 3 de baseline): métricas, predições, figuras, relatórios
 ├── results_archive/             # resultados de desenhos anteriores (não usados nas conclusões)
 └── logs/                        # logs de execução dos experimentos
 ```
@@ -158,7 +158,7 @@ TCC/
 
 **Nenhum peso de modelo treinado é salvo em disco.** O treino usa
 `save_strategy="no"` (`src/bert.py`) e a TextCNN existe só em memória durante o
-run; cada um dos 36 runs treina seus modelos do zero e grava apenas métricas e
+run; cada um dos 39 runs (36 + 3 de baseline) treina seus modelos do zero e grava apenas métricas e
 predições. Para reconstruir qualquer modelo, rode novamente o run
 correspondente (mesmo braço, ratio e seed — ver "Como rodar").
 
@@ -171,13 +171,14 @@ correspondente (mesmo braço, ratio e seed — ver "Como rodar").
 
 ### 4. Resultados finais (`results/`)
 
-36 runs: 4 cenários (10/25/50/75%) × 3 braços × 3 seeds, todos na mesma máquina.
+36 runs: 4 cenários (10/25/50/75%) × 3 braços × 3 seeds, mais 3 runs de baseline
+(`tinybert_full`, TinyBERT com 100% dos dados reais, ratio 0), todos na mesma máquina.
 
 **Tabelas e relatórios**
 
 | Arquivo | Conteúdo |
 |---|---|
-| `results/runs.csv` | Uma linha por run (36): F1 macro, acurácia, precisão, recall, tempos, FLOPs, memória, latência, nº de amostras reais/sintéticas, features selecionadas da CNN |
+| `results/runs.csv` | Uma linha por run (36 + 3 de baseline): F1 macro, acurácia, precisão, recall, tempos, FLOPs, memória, latência, nº de amostras reais/sintéticas, features selecionadas da CNN |
 | `results/predictions/<braço>__<ratio>__<seed>.csv` | 36 arquivos com rótulo verdadeiro, predição e probabilidades por classe para cada frase do teste (base do bootstrap pareado) |
 | `results/summary.csv` | Média ± dp por (braço, ratio) |
 | `results/contrasts.csv` | ΔF1 com IC 95%, Δcusto, razão de custo, custo por p.p. e veredito, por contraste/ratio/métrica de custo |
@@ -189,15 +190,10 @@ correspondente (mesmo braço, ratio e seed — ver "Como rodar").
 
 | Arquivo | Conteúdo |
 |---|---|
-| `results/fig_f1_vs_cost_total_time_s.png` | F1 × tempo total (log) com fronteira de Pareto, um painel por cenário; linha de referência do tempo de anotação humana |
-| `results/fig_f1_vs_cost_total_flops.png`, `results/fig_f1_vs_cost_train_time_s.png`, `results/fig_f1_vs_cost_train_flops.png` | Idem, para FLOPs totais e para custo só de treino |
-| `results/fig_f1_by_ratio.png` | F1 macro de cada braço por nível de escassez |
-| `results/fig_cost_breakdown.png` | Composição dos FLOPs (fine-tuning, TextCNN, geração LLM) |
-| `results/fig_cost_by_ratio.png` | Tempo total e FLOPs de cada braço ao longo da escassez, com a série de anotação humana no painel de tempo |
-| `results/fig_delta_f1_forest.png` | ΔF1 pareado com IC 95% de todos os contrastes |
-| `results/fig_delta_f1_by_ratio.png` | Ganho de TL e DA sobre o TinyBERT escasso e confronto TL − DA por escassez |
-| `results/fig_ce_plane.png` | Plano custo-efetividade TL vs DA (ΔF1 × razão de custo) |
-| `results/fig_time_f1_human.png` | Tempo total e F1 lado a lado por cenário, incluindo a anotação humana (títulos removidos × 4,6 s + treino) como referência de resultado ótimo |
+| `results/fig_f1_by_ratio.png` | Qualidade: F1 macro de TL, DA e TinyBERT escasso por nível de escassez, com o baseline de 100% dos dados (empate até 50%; colapso do escasso em 75%) |
+| `results/fig_cost_by_ratio.png` | Custo: tempo total e FLOPs de cada braço ao longo da escassez (o DA cresce com a geração; o TL cai) |
+| `results/fig_ce_plane.png` | Veredito TL vs DA: ΔF1 (IC 95%) × quantas vezes o TL é mais rápido, um ponto por cenário, com a zona de não-inferioridade |
+| `results/fig_time_f1_human.png` | Tempo total e F1 lado a lado: baseline com 100% dos dados e cada cenário, incluindo a anotação humana (títulos do dataset existente — no baseline, o dataset inteiro — × 4,6 s + treino nesse dataset) como referência de resultado ótimo |
 
 ### 5. Resultados de desenhos anteriores (`results_archive/`)
 
@@ -218,6 +214,7 @@ andamento dos runs e as métricas de treino do HF `Trainer`.
 | `logs/run_25_50_75pct.log` | Cenários 25, 50 e 75% (27 runs) — **resultados finais** |
 | `logs/run_10pct.log` | Cenário 10%, braços TinyBERT escasso e TL — **resultados finais** |
 | `logs/run_10pct_da_live.log` | Cenário 10%, braço DA com geração ao vivo (3 runs) — **resultados finais** |
+| `logs/run_full_baseline.log` | Baseline TinyBERT com 100% dos dados (`--arms tinybert_full --ratios 0`, 3 runs) — **resultados finais** |
 | `logs/run_full.log`, `logs/run_50pct.log` | Tentativas anteriores, interrompidas ou de desenhos superados (ver `results_archive/`) |
 
 ### 7. Gerados localmente e fora do material entregue
