@@ -42,12 +42,6 @@ COSTS = [
     "peak_rss_mb", "peak_accel_mb", "params_total",
     "infer_latency_ms", "infer_throughput_sps", "infer_flops_per_sample",
 ]
-COST_LABELS = {
-    "total_flops": "FLOPs totais (treino + geração LLM)",
-    "total_time_s": "Tempo total (s, treino + geração LLM)",
-    "train_flops": "FLOPs só de treino",
-    "train_time_s": "Tempo só de treino (s)",
-}
 ARM_LABELS = {
     "tinybert_full": "TinyBERT (100% real)",
     "tinybert_restricted": "TinyBERT (escasso)",
@@ -261,32 +255,6 @@ def _figure(n: int, width: float = 4.2, height: float = 3.8, sharey: bool = True
     return fig, axes[:n]
 
 
-def _first_column(axes) -> list[plt.Axes]:
-    return [ax for ax in axes if ax.get_subplotspec().is_first_col()]
-
-
-def _human_annotation(runs: pd.DataFrame) -> pd.DataFrame:
-    """Tempo para anotadores humanos rotularem o mesmo nº de títulos que o DA gera, por ratio."""
-    aug = runs[(runs["arm"] == "tinybert_augmented") & (runs["ratio"] > 0)]
-    n = aug.groupby("ratio")["n_synthetic"].mean().round().astype(int)
-    return pd.DataFrame({"ratio": n.index, "n": n.to_numpy(),
-                         "seconds": n.to_numpy() * HUMAN_ANNOTATION_SEC_PER_SAMPLE})
-
-
-HUMAN_STYLE = {"color": INK, "marker": "X", "linestyle": "--"}
-HUMAN_LABEL = f"Anotação humana ({HUMAN_ANNOTATION_SEC_PER_SAMPLE:g} s/título)"
-
-
-def _pareto(points: pd.DataFrame, cost: str) -> pd.DataFrame:
-    """Pontos não-dominados (menor custo, maior F1)."""
-    front, best = [], -np.inf
-    for _, r in points.sort_values([cost, "f1_macro"], ascending=[True, False]).iterrows():
-        if r["f1_macro"] > best:
-            front.append(r)
-            best = r["f1_macro"]
-    return pd.DataFrame(front)
-
-
 def _log_cost_axis(axis, cost: str, time_unit: str = "s") -> None:
     """Ticks legíveis em eixo log de custo (1-3-10): 30 TFLOP, 100 TFLOP… ou 30 s, 100 s…"""
     flops = cost.endswith("flops")
@@ -296,213 +264,11 @@ def _log_cost_axis(axis, cost: str, time_unit: str = "s") -> None:
     axis.set_minor_formatter(NullFormatter())
 
 
-def plot_f1_vs_cost(runs: pd.DataFrame, cost: str, out: Path) -> None:
-    ratios = sorted(runs.loc[runs["ratio"] > 0, "ratio"].unique())
-    stats = runs.groupby(["arm", "ratio"]).agg(
-        f1_macro=("f1_macro", "mean"), f1_std=("f1_macro", "std"), **{cost: (cost, "mean")}
-    ).reset_index()
-    if stats[cost].isna().all():
-        return
-    full = stats[stats["arm"] == "tinybert_full"]
-    # anotação humana só entra no eixo de tempo total (alternativa à geração LLM, sem FLOPs)
-    human = _human_annotation(runs) if cost == "total_time_s" else pd.DataFrame(columns=["ratio"])
-    # y independente por painel: a comparação aqui é dentro do cenário (entre cenários: fig_f1_by_ratio)
-    fig, axes = _figure(len(ratios), width=5.4, height=4.2, sharey=False, max_cols=2)
-    for ax, ratio in zip(axes, ratios):
-        pts = stats[(stats["ratio"] == ratio) & stats["arm"].isin(ARM_STYLE)].dropna(subset=[cost])
-        front = _pareto(pts, cost)
-        if len(front) > 1:
-            ax.plot(front[cost], front["f1_macro"], color=INK_2, linestyle=":", linewidth=1.2, zorder=1)
-        for _, r in pts.iterrows():
-            st = ARM_STYLE[r["arm"]]
-            ax.errorbar(
-                r[cost], r["f1_macro"], yerr=r["f1_std"] if not math.isnan(r["f1_std"]) else None,
-                color=st["color"], marker=st["marker"], markersize=8, linewidth=1.5, capsize=3,
-                markeredgecolor=SURFACE, markeredgewidth=1.5, label=ARM_LABELS[r["arm"]], zorder=3,
-            )
-        if not full.empty and not math.isnan(full["f1_macro"].iloc[0]):
-            ax.axhline(full["f1_macro"].iloc[0], color=INK_2, linestyle="--", linewidth=1)
-            ax.annotate("TinyBERT 100% real", (0.02, full["f1_macro"].iloc[0]), xycoords=("axes fraction", "data"),
-                        textcoords="offset points", xytext=(0, 4), fontsize=8, color=INK_2)
-        ax.set_xscale("log")
-        h = human[human["ratio"] == ratio]
-        if not h.empty:
-            secs, n = h["seconds"].iloc[0], h["n"].iloc[0]
-            ax.axvline(secs, color=HUMAN_STYLE["color"], linestyle=HUMAN_STYLE["linestyle"], linewidth=1.2,
-                       label=HUMAN_LABEL, zorder=2)
-            ax.annotate(f"anotação humana\n{n} títulos ≈ {secs / 60:.0f} min", (secs, 0.03),
-                        xycoords=("data", "axes fraction"), textcoords="offset points", xytext=(-4, 0),
-                        ha="right", va="bottom", fontsize=8, color=INK,
-                        bbox={"facecolor": SURFACE, "edgecolor": "none", "pad": 1})
-            ax.set_xlim(pts[cost].min() / 1.6, max(pts[cost].max(), secs) * 1.6)
-        _log_cost_axis(ax.xaxis, cost)
-        ax.set_title(f"{ratio}% dos dados reais removidos", fontsize=10, color=INK, loc="left")
-        ax.set_xlabel(COST_LABELS.get(cost, cost) + " — escala log", fontsize=9, color=INK_2)
-    for ax in _first_column(axes):
-        ax.set_ylabel("F1 macro (média ± dp entre seeds)", fontsize=9, color=INK_2)
-    handles, labels = axes[0].get_legend_handles_labels()
-    order = sorted(range(len(labels)), key=lambda i: labels[i] == HUMAN_LABEL)  # referência humana por último
-    handles, labels = [handles[i] for i in order], [labels[i] for i in order]
-    legend_h = 0.5 / fig.get_figheight()  # faixa da legenda (0,5 pol.) independente da nº de linhas
-    fig.legend(handles, labels, loc="lower center", ncol=min(len(labels), 4), frameon=False, fontsize=9,
-               labelcolor=INK, bbox_to_anchor=(0.5, 0))
-    fig.suptitle("Performance × custo computacional (pontilhado = fronteira de Pareto)",
-                 x=0.01, ha="left", fontsize=11, color=INK)
-    fig.tight_layout(rect=(0, legend_h, 1, 1 - 0.3 / fig.get_figheight()))
-    fig.savefig(out, dpi=200, facecolor=SURFACE)
-    plt.close(fig)
-
-
-def plot_f1_by_ratio(runs: pd.DataFrame, out: Path) -> None:
-    stats = runs.groupby(["arm", "ratio"])["f1_macro"].agg(["mean", "std"]).reset_index()
-    fig, (ax,) = _figure(1, width=6.5, height=4.2)
-    for arm, st in ARM_STYLE.items():
-        s = stats[(stats["arm"] == arm)].sort_values("ratio")
-        if s.empty:
-            continue
-        ax.plot(s["ratio"], s["mean"], color=st["color"], marker=st["marker"], markersize=8, linewidth=2,
-                markeredgecolor=SURFACE, markeredgewidth=1.5, label=ARM_LABELS[arm])
-        ax.fill_between(s["ratio"], s["mean"] - s["std"].fillna(0), s["mean"] + s["std"].fillna(0),
-                        color=st["color"], alpha=0.12, linewidth=0)
-    full = stats[stats["arm"] == "tinybert_full"]
-    if not full.empty:
-        ax.axhline(full["mean"].iloc[0], color=INK_2, linestyle="--", linewidth=1)
-        ax.annotate("TinyBERT 100% real", (0.01, full["mean"].iloc[0]), xycoords=("axes fraction", "data"),
-                    textcoords="offset points", xytext=(0, 4), fontsize=8, color=INK_2)
-    ax.set_xticks(sorted(stats.loc[stats["ratio"] > 0, "ratio"].unique()))
-    ax.set_xlabel("% dos dados reais removidos (escassez)", fontsize=9, color=INK_2)
-    ax.set_ylabel("F1 macro", fontsize=9, color=INK_2)
-    ax.set_title("F1 macro por nível de escassez (faixa = ± dp entre seeds)", fontsize=11, color=INK, loc="left")
-    ax.legend(frameon=False, fontsize=8, labelcolor=INK, loc="lower left")
-    fig.tight_layout()
-    fig.savefig(out, dpi=200, facecolor=SURFACE)
-    plt.close(fig)
-
-
-def plot_cost_breakdown(runs: pd.DataFrame, out: Path) -> None:
-    """Barras 100% empilhadas: participação de cada etapa nos FLOPs totais, total anotado.
-
-    A geração com LLM costuma ser ordens de grandeza maior que o treino; numa
-    escala absoluta as demais etapas ficariam invisíveis.
-    """
-    comps = [
-        ("bert_train_flops", "Fine-tuning TinyBERT", "#2a78d6"),
-        ("cnn_train_flops", "Treino TextCNN (inclui cross-fitting)", "#1baf7a"),
-        ("generation_flops", "Geração sintética (LLM)", "#eb6834"),
-    ]
-    ratios = sorted(runs.loc[runs["ratio"] > 0, "ratio"].unique())
-    means = runs.groupby(["arm", "ratio"])[[c for c, *_ in comps] + ["total_flops"]].mean()
-    arms = [a for a in ARM_STYLE if a in runs["arm"].unique()]
-    fig, axes = _figure(len(ratios), width=5.4, height=3.0, max_cols=2)
-    for ax, ratio in zip(axes, ratios):
-        present = [a for a in arms if (a, ratio) in means.index]
-        totals = np.array([means.loc[(a, ratio), "total_flops"] for a in present])
-        left = np.zeros(len(present))
-        for col, label, color in comps:
-            share = np.array([means.loc[(a, ratio), col] for a in present]) / totals * 100
-            ax.barh(range(len(present)), share, left=left, color=color, label=label, height=0.6,
-                    edgecolor=SURFACE, linewidth=2)
-            left += share
-        for y, total in enumerate(totals):
-            text = f"{total / 1e12:,.1f} TFLOP" if total >= 1e12 else f"{total / 1e9:,.1f} GFLOP"
-            ax.annotate(text, (100, y), textcoords="offset points", xytext=(4, 0),
-                        va="center", fontsize=8, color=INK_2)
-        ax.set_yticks(range(len(present)), [ARM_LABELS[a] for a in present], fontsize=8, color=INK)
-        ax.yaxis.set_inverted(True)  # idempotente: invert_yaxis() alternaria nos eixos compartilhados
-        ax.set_xlim(0, 135)
-        ax.set_xticks([0, 25, 50, 75, 100])
-        ax.set_title(f"{ratio}% removidos", fontsize=10, color=INK, loc="left")
-        ax.set_xlabel("% dos FLOPs totais", fontsize=9, color=INK_2)
-    handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", ncol=3, frameon=False, fontsize=9, labelcolor=INK,
-               bbox_to_anchor=(0.5, 0))
-    fig.suptitle("Composição do custo computacional (FLOPs estimados; total à direita)",
-                 x=0.01, ha="left", fontsize=11, color=INK)
-    fig.tight_layout(rect=(0, 0.45 / fig.get_figheight(), 1, 1 - 0.3 / fig.get_figheight()))
-    fig.savefig(out, dpi=200, facecolor=SURFACE)
-    plt.close(fig)
-
-
-def plot_forest(con: pd.DataFrame, out: Path) -> None:
-    d = con[con["cost_metric"] == COST_METRICS[0]].copy()
-    if d.empty:
-        return
-    d["label"] = d.apply(
-        lambda r: f"{ARM_LABELS[r['treatment']]} vs {ARM_LABELS[r['comparator']]} — {r['ratio']}%", axis=1
-    )
-    fig, (ax,) = _figure(1, width=8, height=0.42 * len(d) + 1.4)
-    y = np.arange(len(d))
-    colors = ["#2a78d6" if p else "#8a8984" for p in d["primary"]]
-    ax.hlines(y, d["ci_low"] * 100, d["ci_high"] * 100, color=colors, linewidth=2)
-    ax.scatter(d["delta_f1"] * 100, y, color=colors, s=64, zorder=3, edgecolor=SURFACE, linewidth=1.5)
-    ax.axvline(0, color=INK_2, linewidth=1)
-    ax.axvline(-NON_INFERIORITY_MARGIN * 100, color=INK_2, linewidth=1, linestyle=":")
-    ax.set_yticks(y, d["label"], fontsize=8, color=INK)
-    ax.invert_yaxis()
-    ax.set_xlabel("ΔF1 macro (p.p.) com IC 95% bootstrap — pontilhado = margem de não-inferioridade",
-                  fontsize=9, color=INK_2)
-    ax.set_title("Diferenças pareadas de F1 (azul = contraste principal)", fontsize=11, color=INK, loc="left")
-    fig.tight_layout()
-    fig.savefig(out, dpi=200, facecolor=SURFACE)
-    plt.close(fig)
-
-
-def _times_formatter(v: float, _pos) -> str:
-    return f"{v:g}×"
-
-
-def plot_ce_plane(con: pd.DataFrame, out: Path) -> None:
-    """Plano custo-efetividade do contraste principal: ΔF1 (IC 95%) × razão de custo TL/DA.
-
-    Um ponto por nível de escassez, ligados em ordem crescente de escassez.
-    Esquerda da linha 1× = TL mais barato; acima de 0 = TL melhor.
-    """
-    metrics = [m for m in ("total_time_s", "total_flops") if m in set(con["cost_metric"])]
-    prim = con[con["primary"] & con["cost_metric"].isin(metrics)]
-    if prim.empty:
-        return
-    color = ARM_STYLE[PRIMARY_CONTRAST[0]]["color"]
-    fig, axes = _figure(len(metrics), width=5.4, height=4.6)
-    for ax, metric in zip(axes, metrics):
-        d = prim[prim["cost_metric"] == metric].sort_values("ratio")
-        x, y = d["cost_ratio"].to_numpy(), d["delta_f1"].to_numpy() * 100
-        lo, hi = d["ci_low"].to_numpy() * 100, d["ci_high"].to_numpy() * 100
-        span = max(1.0, np.abs(np.log10(x)).max()) * 1.25
-        ax.set_xscale("log")
-        ax.set_xlim(10**-span, 10**span)
-        ax.xaxis.set_major_formatter(FuncFormatter(_times_formatter))
-        ax.axvline(1, color=INK_2, linewidth=1)
-        ax.axhline(0, color=INK_2, linewidth=1)
-        ax.axhline(-NON_INFERIORITY_MARGIN * 100, color=INK_2, linewidth=1, linestyle=":")
-        ax.plot(x, y, color=color, linewidth=1, alpha=0.45, zorder=2)
-        ax.errorbar(x, y, yerr=[y - lo, hi - y], fmt="o", color=color, markersize=8, linewidth=1.5,
-                    capsize=3, markeredgecolor=SURFACE, markeredgewidth=1.5, zorder=3)
-        for i, (xi, yi, ratio) in enumerate(zip(x, y, d["ratio"])):
-            # alterna acima/abaixo para que cenários vizinhos não colidam
-            ax.annotate(f"{ratio}%", (xi, yi), textcoords="offset points", xytext=(6, 5 if i % 2 else -12),
-                        fontsize=8, color=INK)
-        for (qx, qy, ha, va, text) in [
-            (0.02, 0.98, "left", "top", "TL melhor e mais barato"),
-            (0.98, 0.98, "right", "top", "TL melhor, porém mais caro"),
-            (0.02, 0.02, "left", "bottom", "TL mais barato, porém pior"),
-            (0.98, 0.02, "right", "bottom", "TL pior e mais caro"),
-        ]:
-            ax.text(qx, qy, text, transform=ax.transAxes, ha=ha, va=va, fontsize=8, color=INK_2)
-        ax.set_title(COST_LABELS[metric], fontsize=10, color=INK, loc="left")
-        ax.set_xlabel("custo TL ÷ custo DA (log; < 1× = TL mais barato)", fontsize=9, color=INK_2)
-    ymin = min(prim["ci_low"].min() * 100, -NON_INFERIORITY_MARGIN * 100)
-    ymax = max(prim["ci_high"].max() * 100, 0)
-    pad = (ymax - ymin) * 0.18
-    axes[0].set_ylim(ymin - pad, ymax + pad)
-    axes[0].set_ylabel("ΔF1 macro TL − DA (p.p., IC 95% bootstrap)", fontsize=9, color=INK_2)
-    fig.suptitle("Plano custo-efetividade: TextCNN→TinyBERT (TL) vs TinyBERT + DA",
-                 x=0.01, y=0.98, ha="left", fontsize=11, color=INK)
-    fig.text(0.01, 0.915, "um ponto por % de dados reais removidos · barras = IC 95% · "
-             f"pontilhado = margem de não-inferioridade (−{NON_INFERIORITY_MARGIN * 100:.0f} p.p.)",
-             ha="left", fontsize=9, color=INK_2)
-    fig.tight_layout(rect=(0, 0, 1, 0.9))
-    fig.savefig(out, dpi=200, facecolor=SURFACE)
-    plt.close(fig)
+def _headline(fig: plt.Figure, title: str, subtitle: str) -> None:
+    """Título com a conclusão da figura + subtítulo com como ler; alturas fixas em polegadas."""
+    h = fig.get_figheight()
+    fig.text(0.01, 1 - 0.12 / h, title, ha="left", va="top", fontsize=12, color=INK)
+    fig.text(0.01, 1 - 0.45 / h, subtitle, ha="left", va="top", fontsize=9, color=INK_2, linespacing=1.4)
 
 
 def _end_labels(ax: plt.Axes, ends: list[tuple[float, float, str]], min_gap_pt: float = 11) -> None:
@@ -514,96 +280,137 @@ def _end_labels(ax: plt.Axes, ends: list[tuple[float, float, str]], min_gap_pt: 
     for i in np.argsort(ys):
         placed.append(max(ys[i], placed[-1] + min_gap_pt) if placed else ys[i])
         x, y, text = ends[i]
-        ax.annotate(text, (x, y), textcoords="offset points", xytext=(8, placed[-1] - ys[i]),
-                    va="center", fontsize=8, color=INK_2)
+        ax.annotate(text, (x, y), textcoords="offset points", xytext=(10, placed[-1] - ys[i]),
+                    va="center", fontsize=9, color=INK)
+
+
+FOCUS_ARMS = ["tinybert_augmented", "hybrid_restricted", "tinybert_restricted"]  # ordem de leitura
+SHORT_LABELS = {"tinybert_augmented": "DA", "hybrid_restricted": "TL", "tinybert_restricted": "escasso"}
+
+
+def plot_f1_by_ratio(runs: pd.DataFrame, out: Path) -> None:
+    """Qualidade ao longo da escassez: empate até 50%, colapso do TinyBERT escasso em 75%."""
+    stats = runs.groupby(["arm", "ratio"])["f1_macro"].agg(["mean", "std"]).reset_index()
+    ratios = sorted(stats.loc[stats["ratio"] > 0, "ratio"].unique())
+    arms = [a for a in FOCUS_ARMS if a in set(stats["arm"])]
+    fig, (ax,) = _figure(1, width=9, height=5.4)
+    ends = []
+    for k, arm in enumerate(arms):
+        st, s = ARM_STYLE[arm], stats[stats["arm"] == arm].sort_values("ratio")
+        x = s["ratio"] - (k - (len(arms) - 1) / 2) * 1.0  # leve deslocamento: barras de erro não se sobrepõem
+        ax.errorbar(x, s["mean"], yerr=s["std"].fillna(0), color=st["color"], marker=st["marker"],
+                    markersize=8, linewidth=2, capsize=3, markeredgecolor=SURFACE, markeredgewidth=1.5,
+                    label=ARM_LABELS[arm], zorder=3)
+        ends.append((x.iloc[-1], s["mean"].iloc[-1], f"{SHORT_LABELS[arm]}  {s['mean'].iloc[-1]:.3f}"))
+    full = stats[stats["arm"] == "tinybert_full"]
+    if not full.empty:
+        f1_full = full["mean"].iloc[0]
+        ax.axhline(f1_full, color=INK_2, linestyle="--", linewidth=1, zorder=1)
+        ax.annotate(f"TinyBERT com 100% dos dados reais: {f1_full:.3f}", (0.01, f1_full),
+                    xycoords=("axes fraction", "data"), textcoords="offset points", xytext=(0, 4),
+                    fontsize=8.5, color=INK_2)
+    ax.axvspan(min(ratios) - 4, 50 + 4, color=GRID, alpha=0.35, linewidth=0, zorder=0)
+    ax.text(30, 0.80, "10–50% removidos:\ndiferenças dentro do ruído\n(IC 95% de TL − DA cruzam zero)",
+            ha="center", va="center", fontsize=9, color=INK_2)
+    _end_labels(ax, ends, min_gap_pt=13)
+    ax.set_xticks(ratios, [f"{r}%" for r in ratios])
+    ax.set_xlim(min(ratios) - 4, max(ratios) + 12)
+    ax.set_ylim(0.5, 0.93)
+    ax.set_xlabel("dados reais removidos do treino (escassez)", fontsize=9, color=INK_2)
+    ax.set_ylabel("F1 macro (média ± dp entre 3 seeds)", fontsize=9, color=INK_2)
+    ax.legend(frameon=False, fontsize=9, labelcolor=INK, loc="lower left")
+    _headline(fig, "Até 50% de escassez as três abordagens têm F1 equivalente; em 75%, DA e TL evitam o colapso",
+              "Com 75% removidos, o TinyBERT treinado só com os dados restantes fica instável (dp 0.16 entre seeds); "
+              "o DA recupera mais F1 que o TL.")
+    fig.tight_layout(rect=(0, 0, 1, 1 - 0.8 / fig.get_figheight()))
+    fig.savefig(out, dpi=200, facecolor=SURFACE)
+    plt.close(fig)
 
 
 def plot_cost_by_ratio(runs: pd.DataFrame, out: Path) -> None:
     """Custo médio por nível de escassez; um painel por métrica (nunca eixo duplo)."""
     panels = [
-        ("total_time_s", 1 / 60, "Tempo total (min, treino + geração LLM) — log"),
-        ("total_flops", 1.0, "FLOPs totais (treino + geração LLM) — log"),
+        ("total_time_s", 1 / 60, "Tempo total (treino + geração LLM), escala log"),
+        ("total_flops", 1.0, "FLOPs totais (treino + geração LLM), escala log"),
     ]
-    stats = runs[runs["ratio"] > 0].groupby(["arm", "ratio"])[[c for c, *_ in panels]].mean().reset_index()
-    arms = [a for a in ARM_STYLE if a in set(stats["arm"])]
-    ratios = sorted(stats["ratio"].unique())
-    fig, axes = _figure(len(panels), width=5.4, height=4.2, sharey=False)
+    stats = runs[runs["ratio"] > 0].groupby(["arm", "ratio"])[[c for c, *_ in panels]].mean()
+    arms = [a for a in FOCUS_ARMS if a in stats.index.get_level_values("arm")]
+    ratios = sorted(stats.index.get_level_values("ratio").unique())
+    fig, axes = _figure(len(panels), width=5.6, height=5.0, sharey=False)
     for ax, (col, scale, title) in zip(axes, panels):
         ends = []
         for arm in arms:
             st = ARM_STYLE[arm]
-            s = stats[stats["arm"] == arm].sort_values("ratio")
-            vals = s[col] * scale
-            ax.plot(s["ratio"], vals, color=st["color"], marker=st["marker"], markersize=8, linewidth=2,
+            vals = stats.loc[arm, col].reindex(ratios) * scale
+            ax.plot(ratios, vals, color=st["color"], marker=st["marker"], markersize=8, linewidth=2,
                     markeredgecolor=SURFACE, markeredgewidth=1.5, label=ARM_LABELS[arm])
             last = vals.iloc[-1]
-            text = f"{last:.1f} min" if col == "total_time_s" else f"{last / 1e12:,.0f} TFLOP"
-            ends.append((s["ratio"].iloc[-1], last, text))
-        if col == "total_time_s":
-            h = _human_annotation(runs)
-            vals = h["seconds"] * scale
-            ax.plot(h["ratio"], vals, color=HUMAN_STYLE["color"], marker=HUMAN_STYLE["marker"],
-                    linestyle=HUMAN_STYLE["linestyle"], markersize=8, linewidth=1.5,
-                    markeredgecolor=SURFACE, markeredgewidth=1.0, label=HUMAN_LABEL)
-            for r, v, n in zip(h["ratio"], vals, h["n"]):
-                ax.annotate(f"{n} títulos", (r, v), textcoords="offset points", xytext=(0, 8),
-                            ha="center", fontsize=7, color=INK_2)
-            ends.append((h["ratio"].iloc[-1], vals.iloc[-1], f"{vals.iloc[-1]:.0f} min"))
+            text = f"{last:.1f} min" if col == "total_time_s" else EngFormatter(unit="FLOP", sep=" ", places=0)(last)
+            ends.append((ratios[-1], last, f"{SHORT_LABELS[arm]}  {text}"))
         ax.set_yscale("log")
         _log_cost_axis(ax.yaxis, col, time_unit="min")
-        ax.set_xticks(ratios)
-        ax.set_xlim(min(ratios) - 5, max(ratios) + 14)
-        _end_labels(ax, ends)
-        ax.set_xlabel("% dos dados reais removidos (escassez)", fontsize=9, color=INK_2)
+        ax.set_xticks(ratios, [f"{r}%" for r in ratios])
+        ax.set_xlim(min(ratios) - 5, max(ratios) + 22)
+        _end_labels(ax, ends, min_gap_pt=13)
+        ax.set_xlabel("dados reais removidos do treino (escassez)", fontsize=9, color=INK_2)
         ax.set_title(title, fontsize=10, color=INK, loc="left")
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="lower center", ncol=len(labels), frameon=False, fontsize=9,
-               labelcolor=INK, bbox_to_anchor=(0.5, -0.01))
-    fig.suptitle("Custo computacional médio por nível de escassez (rótulo = valor no cenário mais escasso)",
-                 x=0.01, ha="left", fontsize=11, color=INK)
-    fig.tight_layout(rect=(0, 0.08, 1, 0.94))
+               labelcolor=INK, bbox_to_anchor=(0.5, 0))
+    worst = ratios[-1]
+    t_da, t_tl = stats.loc[("tinybert_augmented", worst), "total_time_s"], stats.loc[("hybrid_restricted", worst), "total_time_s"]
+    _headline(fig, "O custo do DA cresce com a escassez (mais frases a gerar); o do TL cai (menos dados a treinar)",
+              f"Com {worst}% removidos, o DA leva {t_da / 60:.1f} min e o TL {t_tl / 60:.1f} min "
+              f"({t_da / t_tl:.0f}× menos).\nEm FLOPs a diferença é de duas a três ordens de grandeza, "
+              "pois a geração com o LLM de 8B domina o custo do DA.")
+    fig.tight_layout(rect=(0, 0.45 / fig.get_figheight(), 1, 1 - 1.0 / fig.get_figheight()))
     fig.savefig(out, dpi=200, facecolor=SURFACE)
     plt.close(fig)
 
 
-def plot_delta_by_ratio(con: pd.DataFrame, out: Path) -> None:
-    """ΔF1 (IC 95%) ao longo da escassez: ganho de cada estratégia e confronto direto TL − DA."""
-    d = con[con["cost_metric"] == COST_METRICS[0]]
+def plot_ce_plane(con: pd.DataFrame, out: Path) -> None:
+    """Veredito do contraste principal: ΔF1 TL − DA (IC 95%) × quantas vezes o TL é mais rápido.
+
+    Um ponto por nível de escassez; faixa sombreada = zona de não-inferioridade.
+    """
+    d = con[con["primary"] & (con["cost_metric"] == "total_time_s")].sort_values("ratio")
     if d.empty:
         return
-    treat, comp = PRIMARY_CONTRAST
-    panels = [
-        ("Ganho sobre o TinyBERT escasso (só dados reais)",
-         [(t, c) for t, c in SECONDARY_CONTRASTS if c == "tinybert_restricted"]),
-        (f"Confronto direto: {ARM_LABELS[treat]} − {ARM_LABELS[comp]}", [PRIMARY_CONTRAST]),
-    ]
-    fig, axes = _figure(len(panels), width=5.4, height=4.2, sharey=False)
-    for ax, (title, pairs) in zip(axes, panels):
-        for t, c in pairs:
-            s = d[(d["treatment"] == t) & (d["comparator"] == c)].sort_values("ratio")
-            if s.empty:
-                continue
-            color = INK if (t, c) == PRIMARY_CONTRAST else ARM_STYLE[t]["color"]
-            marker = "o" if (t, c) == PRIMARY_CONTRAST else ARM_STYLE[t]["marker"]
-            label = ARM_LABELS[t] if (t, c) != PRIMARY_CONTRAST else "TL − DA"
-            ax.fill_between(s["ratio"], s["ci_low"] * 100, s["ci_high"] * 100, color=color, alpha=0.12,
-                            linewidth=0)
-            ax.plot(s["ratio"], s["delta_f1"] * 100, color=color, marker=marker, markersize=8, linewidth=2,
-                    markeredgecolor=SURFACE, markeredgewidth=1.5, label=label)
-        ax.axhline(0, color=INK_2, linewidth=1)
-        if pairs == [PRIMARY_CONTRAST]:
-            ax.axhline(-NON_INFERIORITY_MARGIN * 100, color=INK_2, linewidth=1, linestyle=":")
-            ax.annotate("margem de não-inferioridade", (0.01, -NON_INFERIORITY_MARGIN * 100),
-                        xycoords=("axes fraction", "data"), textcoords="offset points", xytext=(0, -11),
-                        fontsize=8, color=INK_2)
-        ax.set_xticks(sorted(d["ratio"].unique()))
-        ax.set_xlabel("% dos dados reais removidos (escassez)", fontsize=9, color=INK_2)
-        ax.set_title(title, fontsize=10, color=INK, loc="left")
-        ax.legend(frameon=False, fontsize=8, labelcolor=INK, loc="upper left")
-    axes[0].set_ylabel("ΔF1 macro (p.p.; faixa = IC 95% bootstrap pareado)", fontsize=9, color=INK_2)
-    fig.suptitle("Quanto cada estratégia recupera e quem vence em cada nível de escassez",
-                 x=0.01, ha="left", fontsize=11, color=INK)
-    fig.tight_layout(rect=(0, 0, 1, 0.94))
+    flops = con[con["primary"] & (con["cost_metric"] == "total_flops")]
+    color = ARM_STYLE[PRIMARY_CONTRAST[0]]["color"]
+    x = 1 / d["cost_ratio"].to_numpy()  # custo DA ÷ custo TL: > 1 = TL mais rápido
+    y, lo, hi = (d[c].to_numpy() * 100 for c in ("delta_f1", "ci_low", "ci_high"))
+    margin = -NON_INFERIORITY_MARGIN * 100
+
+    fig, (ax,) = _figure(1, width=9, height=5.6)
+    ax.set_xscale("log")
+    ax.set_xlim(0.35, x.max() * 2.2)
+    ax.set_ylim(min(lo.min(), margin) - 1.2, max(hi.max(), 0) + 1.6)
+    ax.axhspan(margin, ax.get_ylim()[1], color=GRID, alpha=0.45, linewidth=0, zorder=0)
+    ax.text(0.99, 0.97, f"zona de não-inferioridade (ΔF1 ≥ −{-margin:g} p.p.)", transform=ax.transAxes,
+            ha="right", va="top", fontsize=8.5, color=INK_2)
+    ax.axhline(0, color=INK_2, linewidth=1)
+    ax.axhline(margin, color=INK_2, linewidth=1, linestyle=":")
+    ax.axvline(1, color=INK_2, linewidth=1)
+    ax.annotate("mesmo custo", (1, 0.02), xycoords=("data", "axes fraction"), textcoords="offset points",
+                xytext=(4, 0), fontsize=8.5, color=INK_2)
+    ax.errorbar(x, y, yerr=[y - lo, hi - y], fmt="o", color=color, markersize=9, linewidth=1.8,
+                capsize=4, markeredgecolor=SURFACE, markeredgewidth=1.5, zorder=3)
+    for xi, yi, ratio, verdict_text in zip(x, y, d["ratio"], d["verdict"]):
+        short = verdict_text.split(" (")[0]
+        left = xi < 1  # à esquerda da linha "mesmo custo": rótulo do lado esquerdo para não cruzá-la
+        ax.annotate(f"{ratio}% removidos\n{short}", (xi, yi), textcoords="offset points",
+                    xytext=(-10 if left else 10, 0), ha="right" if left else "left", va="center", fontsize=9, color=INK, fontweight="bold" if short == "custo-efetivo" else "normal")
+    ticks = [t for t in (1, 2, 5, 10, 20, 50) if t <= ax.get_xlim()[1]]
+    ax.set_xticks(ticks, [f"{t:g}×" for t in ticks])
+    ax.xaxis.set_minor_formatter(NullFormatter())
+    ax.set_xlabel("quantas vezes o TL é mais rápido que o DA (tempo total, escala log)", fontsize=9, color=INK_2)
+    ax.set_ylabel("ΔF1 macro TL − DA (p.p., IC 95% bootstrap pareado)", fontsize=9, color=INK_2)
+    fx = 1 / flops["cost_ratio"]
+    _headline(fig, "TL × DA: F1 equivalente por uma fração do tempo até 50% de escassez; em 75%, o DA vence por 5 p.p.",
+              "Um ponto por cenário; acima da linha pontilhada, o TL não é mais que 1 p.p. pior que o DA. "
+              f"Em FLOPs o TL é de {fx.min():.0f}× a {fx.max():.0f}× mais barato.")
+    fig.tight_layout(rect=(0, 0, 1, 1 - 0.8 / fig.get_figheight()))
     fig.savefig(out, dpi=200, facecolor=SURFACE)
     plt.close(fig)
 
@@ -611,41 +418,54 @@ def plot_delta_by_ratio(con: pd.DataFrame, out: Path) -> None:
 def plot_time_f1_human(runs: pd.DataFrame, out: Path) -> None:
     """Tempo total e F1 lado a lado, uma linha por método, agrupadas por cenário.
 
-    Anotação humana (hipotética): tempo = n títulos × s/título + treino do TinyBERT no
-    dataset completo (mesmo tamanho do augmentado); F1 não definido — exibido só como resultado ótimo.
+    Anotação humana (hipotética): tempo para rotular à mão o dataset existente do cenário
+    (n títulos reais restantes × s/título) + treino do TinyBERT nesse dataset; F1 não definido —
+    exibido só como resultado ótimo. Se houver runs de `tinybert_full`, um grupo de baseline
+    (100% dos dados reais) abre a figura, com a anotação humana do dataset inteiro.
     """
-    human = _human_annotation(runs).set_index("ratio")
-    stats = runs[runs["ratio"] > 0].groupby(["arm", "ratio"]).agg(
+    stats = runs.groupby(["arm", "ratio"]).agg(
         f1=("f1_macro", "mean"), f1_std=("f1_macro", "std"),
         time_s=("total_time_s", "mean"), train_s=("train_time_s", "mean"),
+        n_train=("n_train", "mean"),
     )
-    order = [a for a in ("tinybert_restricted", "hybrid_restricted", "tinybert_augmented")
-             if a in stats.index.get_level_values("arm")]
-    ratios = sorted(stats.index.get_level_values("ratio").unique())
+    arms = stats.index.get_level_values("arm")
+    order = [a for a in ("tinybert_restricted", "hybrid_restricted", "tinybert_augmented") if a in arms]
+    ratios = sorted(stats.loc[stats.index.get_level_values("ratio") > 0].index.get_level_values("ratio").unique())
 
-    rows = []  # (y, ratio, label, color, marker, minutos, f1, f1_std, referência humana)
-    step = len(order) + 2
-    for i, ratio in enumerate(ratios):
-        base = i * step
-        for j, arm in enumerate(order):
-            r = stats.loc[(arm, ratio)]
-            rows.append((base + j, ratio, ARM_LABELS[arm], ARM_STYLE[arm]["color"], ARM_STYLE[arm]["marker"],
-                         r["time_s"] / 60, r["f1"], r["f1_std"], False))
-        train_full = stats.loc[("tinybert_augmented", ratio), "train_s"] if "tinybert_augmented" in order else 0
-        h_min = (human.loc[ratio, "seconds"] + train_full) / 60
-        rows.append((base + len(order), ratio, f"Anotação humana ({int(human.loc[ratio, 'n'])} títulos)",
-                     INK, HUMAN_STYLE["marker"], h_min, np.nan, np.nan, True))
-    d = pd.DataFrame(rows, columns=["y", "ratio", "label", "color", "marker", "minutes", "f1", "f1_std", "assumed"])
+    def arm_row(arm, ratio, color):
+        r = stats.loc[(arm, ratio)]
+        return (ARM_LABELS[arm], color, r["time_s"] / 60, r["f1"], r["f1_std"], False)
 
-    fig, (ax_t, ax_f) = plt.subplots(1, 2, figsize=(12, 0.4 * len(d) + 3.0), sharey=True,
+    def human_row(dataset):  # dataset = linha de stats do braço treinado só no dataset anotado
+        n = int(round(dataset["n_train"]))
+        minutes = (n * HUMAN_ANNOTATION_SEC_PER_SAMPLE + dataset["train_s"]) / 60
+        return (f"Anotação humana ({n} títulos)", INK, minutes, np.nan, np.nan, True)
+
+    groups = []  # (cabeçalho, linhas); linha = (rótulo, cor, minutos, f1, f1_std, referência humana)
+    if "tinybert_full" in arms:
+        groups.append(("Baseline: 100% dos dados reais (nada removido)",
+                       [arm_row("tinybert_full", 0, INK_2), human_row(stats.loc[("tinybert_full", 0)])]))
+    for ratio in ratios:  # dataset existente = só os dados reais restantes (braço escasso)
+        groups.append((f"Cenário: {ratio}% dos dados reais removidos",
+                       [arm_row(arm, ratio, ARM_STYLE[arm]["color"]) for arm in order]
+                       + [human_row(stats.loc[("tinybert_restricted", ratio)])]))
+
+    rows, starts, y = [], [], 0
+    for _, g in groups:  # uma linha vazia acima de cada grupo para o cabeçalho
+        starts.append(y)
+        rows += [(y + j, *r) for j, r in enumerate(g)]
+        y += len(g) + 2
+    d = pd.DataFrame(rows, columns=["y", "label", "color", "minutes", "f1", "f1_std", "assumed"])
+
+    fig, (ax_t, ax_f) = plt.subplots(1, 2, figsize=(12, 0.4 * (d["y"].max() + 2.6)), sharey=True,
                                      gridspec_kw={"width_ratios": [1.5, 1], "wspace": 0.05})
     fig.patch.set_facecolor(SURFACE)
     for ax in (ax_t, ax_f):
         _style(ax)
         ax.grid(False, axis="y")
-        for i, ratio in enumerate(ratios):  # faixa alternada separa os cenários
+        for i, ((_, g), start) in enumerate(zip(groups, starts)):  # faixa alternada separa os cenários
             if i % 2 == 0:
-                ax.axhspan(i * step - 1.6, i * step + len(order) + 0.6, color=GRID, alpha=0.45, linewidth=0, zorder=0)
+                ax.axhspan(start - 1.6, start + len(g) - 0.4, color=GRID, alpha=0.45, linewidth=0, zorder=0)
 
     # Tempo total: barras lineares com o valor escrito
     t_max = d["minutes"].max()
@@ -686,18 +506,19 @@ def plot_time_f1_human(runs: pd.DataFrame, out: Path) -> None:
     ax_t.set_ylim(d["y"].max() + 0.8, -1.8)  # invertido, com espaço para o 1º cabeçalho
     ax_t.tick_params(axis="y", length=0)
     ax_f.tick_params(axis="y", length=0)
-    for i, ratio in enumerate(ratios):  # cabeçalho de cada grupo na linha vazia acima dele
-        ax_t.text(0.005, i * step - 1.05, f"Cenário: {ratio}% dos dados reais removidos",
+    for (header, _), start in zip(groups, starts):  # cabeçalho de cada grupo na linha vazia acima dele
+        ax_t.text(0.005, start - 1.05, header,
                   transform=ax_t.get_yaxis_transform(), ha="left", va="center",
                   fontsize=10, color=INK, fontweight="bold")
 
     fig.suptitle("Tempo total × F1 por cenário de escassez: TL, DA e anotação humana",
                  x=0.01, y=0.985, ha="left", fontsize=12, color=INK)
-    fig.text(0.01, 1 - 0.5 / fig.get_figheight(),
-             f"Anotação humana = títulos removidos × {HUMAN_ANNOTATION_SEC_PER_SAMPLE:g} s + treino do TinyBERT no "
-             "dataset completo. No F1, a anotação humana aparece só como resultado ótimo de referência (sem valor definido).",
-             ha="left", fontsize=8.5, color=INK_2)
-    fig.subplots_adjust(left=0.2, right=0.98, top=1 - 0.95 / fig.get_figheight(), bottom=0.6 / fig.get_figheight())
+    fig.text(0.01, 1 - 0.38 / fig.get_figheight(),
+             f"Anotação humana = títulos do dataset existente (no baseline, o dataset inteiro) × "
+             f"{HUMAN_ANNOTATION_SEC_PER_SAMPLE:g} s + treino do TinyBERT nesse dataset.\n"
+             "No F1, a anotação humana aparece só como resultado ótimo de referência (sem valor definido).",
+             ha="left", va="top", fontsize=8.5, color=INK_2, linespacing=1.4)
+    fig.subplots_adjust(left=0.2, right=0.98, top=1 - 1.1 / fig.get_figheight(), bottom=0.6 / fig.get_figheight())
     fig.savefig(out, dpi=200, facecolor=SURFACE)
     plt.close(fig)
 
@@ -803,18 +624,12 @@ def write_report(runs: pd.DataFrame, con: pd.DataFrame, eff: pd.DataFrame, resul
     lines += [
         "## Figuras",
         "",
-        "- `fig_f1_vs_cost_<custo>.png` — performance × custo com fronteira de Pareto "
-        "(total_* inclui a geração LLM; train_* considera só o treino; total_time_s requer tempo de geração medido)",
-        "- `fig_f1_by_ratio.png` — F1 por nível de escassez",
-        "- `fig_cost_breakdown.png` — composição do custo",
-        "- `fig_delta_f1_forest.png` — ΔF1 pareado com IC 95%",
-        "- `fig_ce_plane.png` — plano custo-efetividade TL vs DA (ΔF1 × razão de custo), um ponto por escassez",
-        "- `fig_cost_by_ratio.png` — custo total (tempo e FLOPs) de cada braço ao longo da escassez; "
-        f"no painel de tempo, referência de anotação humana ({HUMAN_ANNOTATION_SEC_PER_SAMPLE:g} s/título "
-        "× nº de títulos sintéticos do cenário)",
-        "- `fig_time_f1_human.png` — tempo total × F1 de TL, DA, TinyBERT escasso e anotação humana "
-        "(anotação humana como resultado ótimo de referência, sem F1 definido)",
-        "- `fig_delta_f1_by_ratio.png` — ganho de TL e DA sobre o TinyBERT escasso e confronto TL − DA por escassez",
+        "- `fig_f1_by_ratio.png` — F1 macro de TL, DA e TinyBERT escasso por nível de escassez, "
+        "com o baseline de 100% dos dados",
+        "- `fig_cost_by_ratio.png` — custo total (tempo e FLOPs) de cada braço ao longo da escassez",
+        "- `fig_ce_plane.png` — veredito TL vs DA: ΔF1 (IC 95%) × quantas vezes o TL é mais rápido, um ponto por cenário",
+        "- `fig_time_f1_human.png` — tempo total × F1 por cenário, com baseline de 100% dos dados e "
+        f"anotação humana ({HUMAN_ANNOTATION_SEC_PER_SAMPLE:g} s/título × títulos do dataset existente)",
         "",
     ]
     (results_dir / "report.md").write_text("\n".join(lines), encoding="utf-8")
@@ -842,14 +657,9 @@ def run(results_dir: Path) -> None:
     eff = efficiency(runs)
     eff.to_csv(results_dir / "efficiency.csv", index=False)
 
-    for cost in COST_METRICS:
-        plot_f1_vs_cost(runs, cost, results_dir / f"fig_f1_vs_cost_{cost}.png")
     plot_f1_by_ratio(runs, results_dir / "fig_f1_by_ratio.png")
-    plot_cost_breakdown(runs, results_dir / "fig_cost_breakdown.png")
-    plot_forest(con, results_dir / "fig_delta_f1_forest.png")
-    plot_ce_plane(con, results_dir / "fig_ce_plane.png")
     plot_cost_by_ratio(runs, results_dir / "fig_cost_by_ratio.png")
-    plot_delta_by_ratio(con, results_dir / "fig_delta_f1_by_ratio.png")
+    plot_ce_plane(con, results_dir / "fig_ce_plane.png")
     plot_time_f1_human(runs, results_dir / "fig_time_f1_human.png")
     write_report(runs, con, eff, results_dir)
     logger.info("Relatório → %s", results_dir / "report.md")

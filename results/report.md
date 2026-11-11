@@ -65,6 +65,7 @@ Wilcoxon pareado sobre todos os (ratio, seed): n=12, mediana ΔF1=-0.77 p.p., p=
 | tinybert_augmented | 25 | 3 | 0.8856 | 0.002442 | 0.9058 | 713.4 | 36.4 | 749.8 | 1.446e+15 | 2.333 | 1.435e+07 |
 | tinybert_augmented | 50 | 3 | 0.8756 | 0.009367 | 0.8981 | 1403 | 35.96 | 1439 | 2.844e+15 | 2.342 | 1.435e+07 |
 | tinybert_augmented | 75 | 3 | 0.8635 | 0.005817 | 0.8826 | 2096 | 36.13 | 2132 | 4.251e+15 | 2.338 | 1.435e+07 |
+| tinybert_full | 0 | 3 | 0.9077 | 0.001321 | 0.9208 | 0 | 36.05 | 36.05 | 3.858e+13 | 2.38 | 1.435e+07 |
 | tinybert_restricted | 10 | 3 | 0.8875 | 0.006559 | 0.9097 | 0 | 30.9 | 30.9 | 3.472e+13 | 2.284 | 1.435e+07 |
 | tinybert_restricted | 25 | 3 | 0.8965 | 0.009487 | 0.9155 | 0 | 27.03 | 27.03 | 2.894e+13 | 2.33 | 1.435e+07 |
 | tinybert_restricted | 50 | 3 | 0.8702 | 0.004162 | 0.8932 | 0 | 18.09 | 18.09 | 1.928e+13 | 2.316 | 1.435e+07 |
@@ -162,11 +163,7 @@ Frequência entre runs:
 
 ## Figuras
 
-- `fig_f1_vs_cost_<custo>.png` — performance × custo com fronteira de Pareto (total_* inclui a geração LLM; train_* considera só o treino; total_time_s requer tempo de geração medido)
-- `fig_f1_by_ratio.png` — F1 por nível de escassez
-- `fig_cost_breakdown.png` — composição do custo
-- `fig_delta_f1_forest.png` — ΔF1 pareado com IC 95%
-- `fig_ce_plane.png` — plano custo-efetividade TL vs DA (ΔF1 × razão de custo), um ponto por escassez
-- `fig_cost_by_ratio.png` — custo total (tempo e FLOPs) de cada braço ao longo da escassez; no painel de tempo, referência de anotação humana (4.6 s/título × nº de títulos sintéticos do cenário)
-- `fig_time_f1_human.png` — tempo total × F1 de TL, DA, TinyBERT escasso e anotação humana (anotação humana como resultado ótimo de referência, sem F1 definido)
-- `fig_delta_f1_by_ratio.png` — ganho de TL e DA sobre o TinyBERT escasso e confronto TL − DA por escassez
+- `fig_f1_by_ratio.png` — F1 macro de TL, DA e TinyBERT escasso por nível de escassez, com o baseline de 100% dos dados
+- `fig_cost_by_ratio.png` — custo total (tempo e FLOPs) de cada braço ao longo da escassez
+- `fig_ce_plane.png` — veredito TL vs DA: ΔF1 (IC 95%) × quantas vezes o TL é mais rápido, um ponto por cenário
+- `fig_time_f1_human.png` — tempo total × F1 por cenário, com baseline de 100% dos dados e anotação humana (4.6 s/título × títulos do dataset existente)
